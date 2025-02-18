@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [name, setName] = useState("");
@@ -20,6 +21,12 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900">
       <div className="p-6 w-96 text-center bg-gray-800 text-white rounded-xl shadow-lg">
+      <Image
+        src="/logo.png"
+        width={500}
+        height={500}
+        alt="Picture of the author"
+      />
         <h2 className="text-xl font-bold mb-4">Join or Create a Room</h2>
         <input type="text" placeholder="enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2 mb-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         <input type="text" placeholder="Enter room number" value={room} onChange={(e) => setRoom(e.target.value)}
