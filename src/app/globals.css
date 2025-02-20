@@ -5,6 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-display: "Jersey 25", serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,3 +20,10 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+.jersey-25-regular {
+  font-family: "Jersey 25", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
