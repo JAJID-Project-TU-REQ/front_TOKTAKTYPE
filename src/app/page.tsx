@@ -12,15 +12,21 @@ export default function LoginPage() {
 
   const handleJoinRoom = async () => {
     if (name && roomCode) {
-      const response = await joinRoom(roomCode, name);
-      if (response.success) {
-        connectWebSocket(roomCode, name, false); 
-        router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
-      } else {
-        console.error("Failed to join room");
+      try {
+        const response = await joinRoom(roomCode, name);
+  
+        if (response.success) { 
+          connectWebSocket(roomCode, name, false);
+          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
+        } else {
+          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
+        }
+      } catch (error) {
+        console.error("Error joining room:", error);
       }
     }
   };
+  
 
   const handleCreateRoom = async () => {
     if (name) {

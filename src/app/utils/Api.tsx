@@ -9,12 +9,13 @@ export async function createRoom(playerName: string): Promise<{ roomCode: string
   return response.json();
 }
 
-export async function joinRoom(roomCode: string, playerName: string): Promise<{ success: boolean }> {
-  const response = await fetch(`${API_URL}/join/${roomCode}`, {
+export async function joinRoom(roomCode: string, playerName: string): Promise<{ success: boolean; error?: string }> {
+  const response = await fetch(`${API_URL}/join`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerName }),
+    body: JSON.stringify({ roomCode, playerName }), // ✅ ส่งผ่าน body
   });
+
   return response.json();
 }
 
