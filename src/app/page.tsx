@@ -28,12 +28,12 @@ export default function LoginPage() {
         alt="Picture of the author"
       />
         <h2 className="text-xl font-bold mb-4">Join or Create a Room</h2>
-        <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 mb-3 rounded-xl text-white border border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 mb-3 rounded-xl text-black border border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       
         {/* Room number */}
          <div className="mt-6 flex max-w-md gap-x-4 mb-4 bg-black p-4 rounded-3xl">
-          <label htmlFor="email-address" className="sr-only">Email address</label>
-          <input id="email-address" name="email" type="email" autoComplete="email" required className="min-w-0 flex-auto rounded-3xl bg-white px-3.5 py-2 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" placeholder="Enter your email" />
+          <label htmlFor="email-address" className="sr-only">Code room</label>
+          <input id="code-room" name="coderoom" type="code" required className="min-w-0 flex-auto rounded-3xl bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" placeholder="Enter Room code" />
           <button type="submit" className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Join room</button>
         </div>
 

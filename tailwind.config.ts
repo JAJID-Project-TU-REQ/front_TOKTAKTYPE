@@ -8,6 +8,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        jersey: ['"Jeysey 25"', 'cursive'],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
@@ -15,4 +18,4 @@ export default {
     },
   },
   plugins: [],
-} satisfies Config;
+} as Config;
