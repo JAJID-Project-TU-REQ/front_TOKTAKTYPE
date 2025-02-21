@@ -1,8 +1,20 @@
 "use client";
 import React, { useState } from "react";
 import Image from 'next/image'
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
+
+  const character = [
+    { id: 1, name: "Borhk" , image: "/Apple boy.svg"},
+    { id: 2, name: "aL" , image: "/Blue boy.svg"},
+    { id: 3, name: "Victoria" , image: "/flow.svg"},
+    { id: 4, name: "Vocalno", image: "/red.svg"},
+    { id: 5, name: "Solanum" , image: "/Tomato.svg"}
+  ]
+
+  const [selected,setSelected] = useState<number | null>(null);
+  
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
 
@@ -19,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
+    <div className="flex items-center justify-center min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
       <div className="p-6 w-96 text-center bg-white text-white rounded-xl">
       <Image
         src="/logo.png"
@@ -27,11 +39,39 @@ export default function LoginPage() {
         height={300}
         alt="Picture of the author"
       />
-        <h2 className="text-xl font-bold mb-4">Join or Create a Room</h2>
-        <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 mb-3 rounded-xl text-black border border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+
+      {/* Character pick */}
+      <div className="flex flex-col items-center gap-2 p-2">
+      <h1 className="text-xl font-bold text-black">Select Your Character</h1>
+      <div className="flex gap-4">
+
+        {character.map((char) => (
+          <motion.div
+            key={char.id}
+            className={`w-24 h-24 rounded-lg flex items-center justify-center cursor-pointer text-lg font-bold shadow-lg transition-all border-2 ${
+              selected === char.id ? "scale-110 border-stone-500" : "border-transparent"
+            }`}
+            onClick={() => setSelected(char.id)}
+            whileHover={{ scale: 1.1 }}
+          >
+            <Image
+            src={char.image} 
+            alt={char.name} 
+            width={96}
+            height={96}
+            className="w-full h-full object-cover rounded-lg"
+            priority ={selected === char.id}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Name input box */}
+        <h2 className="text-xl font-bold mb-2 mt-3 text-black">Join or Create a Room</h2>
+        <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 rounded-xl text-black border border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       
         {/* Room number */}
-         <div className="mt-6 flex max-w-md gap-x-4 mb-4 bg-black p-4 rounded-3xl">
+         <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
           <label htmlFor="email-address" className="sr-only">Code room</label>
           <input id="code-room" name="coderoom" type="code" required className="min-w-0 flex-auto rounded-3xl bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" placeholder="Enter Room code" />
           <button type="submit" className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Join room</button>
@@ -41,6 +81,7 @@ export default function LoginPage() {
           Create Room
         </button>
       </div>
+    </div>
     </div>
   );
 }
