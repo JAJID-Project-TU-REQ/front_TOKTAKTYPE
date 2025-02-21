@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";  // ใช้ useSearchParams เพื่อดึง query params
 import { getWebSocket, connectWebSocket } from "../utils/WebSocket";
 import { fetchPlayerNames } from "../utils/Api";
+import Image from 'next/image';
 
 interface Player {
   id: number;
@@ -44,23 +45,35 @@ const Lobby: React.FC = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto bg-white shadow-lg rounded-2xl p-6">
-      <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
-      <p className="text-center text-gray-600 mb-2">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
-      <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
-      <div className="overflow-x-auto">
-        <ul className="w-full border border-gray-200 rounded-lg p-3">
-          {players.map((player) => (
-            <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
-              <span>{player.name}</span>
-              <span className="text-gray-500">{player.id}/10</span>
-            </li>
-          ))}
-        </ul>
+    <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
+      <div className="flex flex-col items-center justify-start pt-10">
+        <div className="mb-4">
+          <Image
+            src="/logo.png"
+            width={200}
+            height={200}
+            alt="Picture of the author"
+          />
+        </div>
+        <div className="w-full max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
+          <p className="text-center text-gray-600 mb-2">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
+          <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
+          <div className="overflow-x-auto">
+            <ul className="w-full border border-gray-200 rounded-lg p-3">
+              {players.map((player) => (
+                <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
+                  <span>{player.name}</span>
+                  <span className="text-gray-500">{player.id}/10</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-blue-600">
+            Start Game
+          </button>
+        </div>
       </div>
-      <button className="mt-4 w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600">
-        Start Game
-      </button>
     </div>
   );
 };

@@ -44,7 +44,7 @@ export default function LoginPage() {
       setRoomCode(response.roomCode);  
 
       connectWebSocket(response.roomCode, name, true); 
-      router.push("/lobby");
+      router.push(`/lobby?roomCode=${response.roomCode}&playerName=${name}&isCreateRoom=true`);
     } else {
       console.error("Name is required");
     }

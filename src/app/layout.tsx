@@ -11,6 +11,9 @@ const jersey25 = Jersey_25({
 export const metadata: Metadata = {
   title: "TOKTAK TYPE",
   description: "Speed type game",
+  icons:{
+    icon:"/Group 16.ico",
+  }
 };
 
 export default function RootLayout({
