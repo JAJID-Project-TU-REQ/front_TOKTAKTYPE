@@ -1,9 +1,15 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createRoom, joinRoom } from "./utils/Api";
+import { connectWebSocket } from "./utils/WebSocket";
 import Image from 'next/image'
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
+  const [name, setName] = useState<string>("");
+  const [roomCode, setRoomCode] = useState<string>("");
+  const router = useRouter();
 
   const character = [
     { id: 1, name: "Borhk" , image: "/Apple boy.svg"},
@@ -12,27 +18,44 @@ export default function LoginPage() {
     { id: 4, name: "Vocalno", image: "/red.svg"},
     { id: 5, name: "Solanum" , image: "/Tomato.svg"}
   ]
-
   const [selected,setSelected] = useState<number | null>(null);
   
-  const [name, setName] = useState("");
-  const [room, setRoom] = useState("");
-
-  const handleJoinRoom = () => {
-    if (name && room) {
-      console.log(`Joining room`);
+  const handleJoinRoom = async () => {
+    if (name && roomCode) {
+      try {
+        const response = await joinRoom(roomCode, name);
+  
+        if (response.success) { 
+          connectWebSocket(roomCode, name, false);
+          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
+        } else {
+          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
+        }
+      } catch (error) {
+        console.error("Error joining room:", error);
+      }
     }
   };
+  
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (name) {
-      console.log(`Creating a new room`);
+      const response = await createRoom(name);
+      setRoomCode(response.roomCode);  
+
+      connectWebSocket(response.roomCode, name, true); 
+      router.push("/lobby");
+    } else {
+      console.error("Name is required");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
-      <div className="p-6 w-96 text-center bg-white text-white rounded-xl">
+    <div className="flex items-center justify-center 
+    min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
+      <div className="p-6 w-96 text-center
+       bg-white text-white rounded-xl">
+
       <Image
         src="/logo.png"
         width={350}
@@ -68,18 +91,34 @@ export default function LoginPage() {
 
       {/* Name input box */}
         <h2 className="text-xl font-bold mb-2 mt-3 text-black">Join or Create a Room</h2>
-        <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 rounded-xl text-black border border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <input type="text" 
+        placeholder="Enter your name" 
+        value={name} onChange={(e) => setName(e.target.value)} 
+        className="w-full p-3 rounded-xl text-black border
+         border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       
         {/* Room number */}
          <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
-          <label htmlFor="email-address" className="sr-only">Code room</label>
-          <input id="code-room" name="coderoom" type="code" required className="min-w-0 flex-auto rounded-3xl bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" placeholder="Enter Room code" />
-          <button type="submit" className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">Join room</button>
+          <label htmlFor="room-name" 
+          className="sr-only">Code room</label>
+          <input type="text" 
+          required className="min-w-0 flex-auto rounded-3xl
+           bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10
+            placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" 
+            placeholder="Enter Room code" />
+
+          <button onClick={handleJoinRoom} type="submit" 
+          className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Join room</button> 
         </div>
 
-        <button onClick={handleCreateRoom} className="w-10/12 p-2 bg-black hover:bg-stone-800 rounded-3xl">
+        <button onClick={handleCreateRoom} 
+        className="w-10/12 p-2 bg-black
+         hover:bg-stone-800 
+         rounded-3xl">
           Create Room
         </button>
+
       </div>
     </div>
     </div>
