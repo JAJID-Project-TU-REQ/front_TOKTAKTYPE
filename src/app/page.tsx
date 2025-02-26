@@ -99,9 +99,7 @@ export default function LoginPage() {
       
         {/* Room number */}
          <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
-          <label htmlFor="room-name" 
-          className="sr-only">Code room</label>
-          <input type="text" 
+          <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} type="text" 
           required className="min-w-0 flex-auto rounded-3xl
            bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10
             placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" 
