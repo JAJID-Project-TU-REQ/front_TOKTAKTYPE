@@ -1,4 +1,4 @@
-export const API_URL = "http://localhost:8080/api/gameroom";
+export const API_URL = "https://g1zcsbq5-8080.asse.devtunnels.ms/api/gameroom";
 
 export async function createRoom(playerName: string): Promise<{ roomCode: string }> {
   const response = await fetch(`${API_URL}/create`, {

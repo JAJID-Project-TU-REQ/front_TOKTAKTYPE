@@ -6,7 +6,7 @@ export const connectWebSocket = (roomCode: string, playerName: string, isCreateR
     return;
   }
 
-  socket = new WebSocket(`ws://192.168.1.134:8080/ws/game-room`);
+  socket = new WebSocket(`ws://g1zcsbq5-8080.asse.devtunnels.ms/ws/game-room`);
 
   socket.onopen = () => {
     console.log("Connected to WebSocket server.");
