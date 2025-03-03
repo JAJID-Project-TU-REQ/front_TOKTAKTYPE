@@ -1,4 +1,7 @@
-export const API_URL = "https://g1zcsbq5-8080.asse.devtunnels.ms/api/gameroom";
+const local_port = "localhost:8080"
+// const forwarded_port = "g1zcsbq5-8080.asse.devtunnels.ms"
+
+export const API_URL = `http://${local_port}/api/gameroom`;
 
 export async function createRoom(playerName: string): Promise<{ roomCode: string }> {
   const response = await fetch(`${API_URL}/create`, {
