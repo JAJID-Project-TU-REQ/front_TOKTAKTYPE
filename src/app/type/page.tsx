@@ -95,8 +95,13 @@ const MonkeyType = () => {
         if (startTime && userInput.length > 0) {
             const currentTime = Date.now();
             const timeInMinutes = (currentTime - startTime) / 60000;
-            const words = userInput.split(' ').length; // Use userInput for real-time WPM
-            const calculatedWpm = Math.round(words / timeInMinutes);
+            let numCorrectWords = 0;
+            for (let i = 0; i < text.split(' ').length; i++) {
+                    if (text.split(' ')[i] === userInput.split(' ')[i]) {
+                        numCorrectWords++;
+                    }
+            }
+            const calculatedWpm = Math.round(numCorrectWords / timeInMinutes);
             setWpm(calculatedWpm);
         } else {
             setWpm(0);
@@ -117,14 +122,11 @@ const MonkeyType = () => {
                         let className = "relative";
                         let content = char;
                         if (index < userInput.length) {
-                            console.log("Index: ", index);
-                            console.log("UserInput: ", userInput[index]);
-                            console.log("Char: ", char);
                             const isCorrect = userInput[index] === char;
                             console.log("isCorrect: ", isCorrect);
                             className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
                             content = userInput[index];
-                            if (userInput[index] === " ") {
+                            if (userInput[index] === " " && char !== " ") {
                                 content = "_";
                             }
                         } else {
