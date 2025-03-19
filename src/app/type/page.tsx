@@ -123,7 +123,6 @@ const MonkeyType = () => {
                         let content = char;
                         if (index < userInput.length) {
                             const isCorrect = userInput[index] === char;
-                            console.log("isCorrect: ", isCorrect);
                             className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
                             content = userInput[index];
                             if (userInput[index] === " " && char !== " ") {
@@ -138,7 +137,6 @@ const MonkeyType = () => {
                         }
 
                         return (
-                            console.log("Content: ", content),
                             <span key={index} className={className} style={{ width: char === " " ? "0.5em" : "auto" }}>
                                 {content}
                             </span>
