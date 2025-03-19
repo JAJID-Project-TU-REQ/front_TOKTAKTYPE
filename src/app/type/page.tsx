@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 
 const MonkeyType = () => {
     const [text, setText] = useState('');
@@ -55,6 +55,8 @@ const MonkeyType = () => {
 
     const handleChange = (e) => {
         const value = e.target.value;
+        const key = e.key;
+
 
         if (!isStarted && value.length > 0) {
             setIsStarted(true);
@@ -63,6 +65,7 @@ const MonkeyType = () => {
 
         if (!isFinished) {
             setUserInput(value);
+
 
             let mistakeCount = 0;
             for (let i = 0; i < value.length; i++) {
@@ -77,13 +80,11 @@ const MonkeyType = () => {
                 : 100;
             setAccuracy(Math.round(calculatedAccuracy));
 
-            // Calculate WPM in real-time
             calculateWpm();
 
             if (value.length === text.length) {
                 setEndTime(Date.now());
                 setIsFinished(true);
-                // calculateWpm(); // No need to calculate here anymore
             }
 
             setCurrentIndex(value.length);
@@ -108,7 +109,6 @@ const MonkeyType = () => {
         }
     };
 
-    // Render text with character-by-character styling
     const renderText = () => {
         return (
             <div className="font-mono text-lg relative">
@@ -116,28 +116,27 @@ const MonkeyType = () => {
                     {text.split('').map((char, index) => {
                         let className = "relative";
                         let content = char;
-
                         if (index < userInput.length) {
-                            // Character has been typed
+                            console.log("Index: ", index);
+                            console.log("UserInput: ", userInput[index]);
+                            console.log("Char: ", char);
                             const isCorrect = userInput[index] === char;
+                            console.log("isCorrect: ", isCorrect);
                             className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
-                            content = userInput[index]; // Show what user actually typed
+                            content = userInput[index];
+                            if (userInput[index] === " ") {
+                                content = "_";
+                            }
                         } else {
-                            // Character hasn't been typed yet
                             className += " text-gray-400";
 
-                            // Show cursor at current position
                             if (index === currentIndex && !isFinished) {
                                 className += " border-l-2 border-gray-600 animate-pulse";
                             }
                         }
 
-                        // Add special styling for spaces to make them visible
-                        if (char === " ") {
-                            content = " "; // Space character
-                        }
-
                         return (
+                            console.log("Content: ", content),
                             <span key={index} className={className} style={{ width: char === " " ? "0.5em" : "auto" }}>
                                 {content}
                             </span>
@@ -191,12 +190,12 @@ const MonkeyType = () => {
                 </div>
             )}
 
-            {/* <button
+            <button
                 onClick={resetTest}
-                className="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                className="w-full p-2 text-white rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
             >
                 {isFinished ? "Try Again" : "Reset"}
-            </button> */}
+            </button>
         </div>
     );
 };
