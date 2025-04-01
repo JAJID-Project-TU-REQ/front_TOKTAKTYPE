@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createRoom, joinRoom } from "./utils/Api";
-import { connectWebSocket } from "./utils/WebSocket";
+import { createRoom, joinRoom } from "../utils/Api";
+import { connectWebSocket } from "../utils/WebSocket";
 import Image from 'next/image'
 import { motion } from "framer-motion";
 
