@@ -6,10 +6,7 @@ export const connectWebSocket = (roomCode: string, playerName: string, isCreateR
     return;
   }
 
-  const local_port = "localhost:8080"
-  // const forwarded_port = "g1zcsbq5-8080.asse.devtunnels.ms"
-
-  socket = new WebSocket(`ws://${local_port}/ws/game-room`);
+  socket = new WebSocket(`ws://192.168.1.134:8080/ws/game-room`);
 
   socket.onopen = () => {
     console.log("Connected to WebSocket server.");

@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";  // ใช้ useSearchParams เพื่อดึง query params
 import { getWebSocket, connectWebSocket } from "../utils/WebSocket";
+import { fetchPlayerNames } from "../utils/Api";
+import Image from 'next/image';
 
 interface Player {
   id: number;
@@ -9,7 +11,7 @@ interface Player {
 }
 
 const Lobby: React.FC = () => {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams();  // ใช้ useSearchParams
   const roomCode = searchParams.get("roomCode");
   const playerName = searchParams.get("playerName");
   const isCreateRoom = searchParams.get("isCreateRoom");
@@ -17,70 +19,73 @@ const Lobby: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    if (!roomCode || !playerName || isCreateRoom === null) return;
+    if (roomCode && playerName && isCreateRoom !== null) {
+      const ws = getWebSocket();
 
-    let ws = getWebSocket();
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("WebSocket disconnected, reconnecting...");
+        connectWebSocket(roomCode, playerName, isCreateRoom === "true");
+      }
 
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.log("WebSocket disconnected, reconnecting...");
-      connectWebSocket(roomCode, playerName, isCreateRoom === "true");
-
-      setTimeout(() => {
-        ws = getWebSocket();
-        if (ws) {
-          ws.addEventListener("message", handlePlayerUpdate);
-          sendJoinRequest(ws, roomCode, playerName, isCreateRoom);
-        }
-      }, 500);
-    } else {
-      ws.addEventListener("message", handlePlayerUpdate);
-      sendJoinRequest(ws, roomCode, playerName, isCreateRoom);
+      loadPlayers(roomCode); // ⬅️ ใช้ฟังก์ชันที่ย้ายไป `api.tsx`
     }
-
-    return () => {
-      ws?.removeEventListener("message", handlePlayerUpdate);
-    };
   }, [roomCode, playerName, isCreateRoom]);
 
-  const sendJoinRequest = (ws: WebSocket, roomCode: string, playerName: string, isCreateRoom: string | null) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      const action = isCreateRoom === "true" ? "create" : "join";
-      ws.send(`${action}:${roomCode}:${playerName}`);
-    }
-  };
-
-  const handlePlayerUpdate = (event: MessageEvent) => {
-    const data = event.data;
-    if (data.startsWith("players:")) {
-      const playerList: string[] = data.replace("players:", "").split(",");
-      const formattedPlayers: Player[] = playerList.map((name, index) => ({
-        id: index + 1,
+  const loadPlayers = async (roomCode: string) => {
+    try {
+      const data = await fetchPlayerNames(roomCode); // ⬅️ ใช้ API ที่ย้ายไป
+      const playersWithId = data.players.map((name, index) => ({
+        id: index + 1, // ใช้ index เป็น id หากไม่มี id จาก API
         name,
       }));
-      setPlayers(formattedPlayers);
+      setPlayers(playersWithId); // ตั้งค่าให้เป็น Player[]
+    } catch (error) {
+      console.error("Error fetching player names:", error);
     }
   };
 
   return (
-    <div className="max-w-lg mx-auto bg-white shadow-lg rounded-2xl p-6">
-      <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
-      <p className="text-center text-gray-600 mb-2">
-        Room Code: <span className="font-bold text-gray-800">{roomCode}</span>
-      </p>
-      <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
-      <div className="overflow-x-auto">
-        <ul className="w-full border border-gray-200 rounded-lg p-3">
-          {players.map((player) => (
-            <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
-              <span>{player.name}</span>
-              <span className="text-gray-500">{player.id}/10</span>
-            </li>
-          ))}
-        </ul>
+    // Background jra
+    <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
+      <div className="flex flex-col items-center justify-start pt-10">
+        <div className="mb-4">
+          <Image
+            src="/logo.png"
+            width={200}
+            height={200}
+            alt="LOGO TTT"
+          />
+        </div>
+
+        <div className="w-full max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
+          {/* ROOM BOX */}
+            <p className=" flex
+            bg-white bg-opacity-80 border-2
+             border-stone-500 rounded-2xl 
+             text-center text-gray-600 
+             justify-center
+             mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
+          
+          {/* Waiting player */}
+          <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
+          
+          {/* Table player */}
+          <div className="overflow-x-auto">
+            <ul className="w-full border border-gray-200 rounded-lg p-3">
+              {players.map((player) => (
+                <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
+                  <span>{player.name}</span>
+                  <span className="text-gray-500">{player.id}/10</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button className="mt-4 w-full bg-stone-800 text-white  p-2 rounded-lg hover:bg-stone-600">
+            ! Start Game !
+          </button>
+        </div>
       </div>
-      <button className="mt-4 w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600">
-        Start Game
-      </button>
     </div>
   );
 };
