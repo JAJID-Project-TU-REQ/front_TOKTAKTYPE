@@ -1,71 +1,92 @@
-"use client"; // บอกให้ไฟล์นี้ทำงานในฝั่ง client
+"use client";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";  // ใช้ useSearchParams เพื่อดึง query params
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createRoom, joinRoom } from "./utils/Api";
-import { connectWebSocket } from "./utils/WebSocket";
+import Image from 'next/image';
 
-export default function LoginPage() {
-  const [name, setName] = useState<string>("");
-  const [roomCode, setRoomCode] = useState<string>("");
-  const router = useRouter();
+interface Player {
+  id: number;
+  name: string;
+}
 
-  const handleJoinRoom = async () => {
-    if (name && roomCode) {
-      try {
-        const response = await joinRoom(roomCode, name);
-  
-        if (response.success) { 
-          connectWebSocket(roomCode, name, false);
-          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
-        } else {
-          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
-        }
-      } catch (error) {
-        console.error("Error joining room:", error);
+const Lobby: React.FC = () => {
+  const searchParams = useSearchParams();  // ใช้ useSearchParams
+  const roomCode = searchParams.get("roomCode");
+  const playerName = searchParams.get("playerName");
+  const isCreateRoom = searchParams.get("isCreateRoom");
+
+  const [players, setPlayers] = useState<Player[]>([]);
+
+  useEffect(() => {
+    if (roomCode && playerName && isCreateRoom !== null) {
+      const ws = getWebSocket();
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("WebSocket disconnected, reconnecting...");
+        connectWebSocket(roomCode, playerName, isCreateRoom === "true");
       }
+
+      loadPlayers(roomCode); // ⬅️ ใช้ฟังก์ชันที่ย้ายไป `api.tsx`
     }
-  };
-  
+  }, [roomCode, playerName, isCreateRoom]);
 
-  const handleCreateRoom = async () => {
-    if (name) {
-      const response = await createRoom(name);
-      setRoomCode(response.roomCode);  
-
-      connectWebSocket(response.roomCode, name, true); 
-      router.push(`/lobby?roomCode=${response.roomCode}&playerName=${name}&isCreateRoom=true`);
-    } else {
-      console.error("Name is required");
+  const loadPlayers = async (roomCode: string) => {
+    try {
+      const data = await fetchPlayerNames(roomCode); // ⬅️ ใช้ API ที่ย้ายไป
+      const playersWithId = data.players.map((name, index) => ({
+        id: index + 1, // ใช้ index เป็น id หากไม่มี id จาก API
+        name,
+      }));
+      setPlayers(playersWithId); // ตั้งค่าให้เป็น Player[]
+    } catch (error) {
+      console.error("Error fetching player names:", error);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="p-6 w-96 text-center bg-gray-800 text-white rounded-xl shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Join or Create a Room</h2>
-        <input 
-        type="text" 
-        placeholder="enter your name" 
-        value={name} onChange={(e) => setName(e.target.value)} 
-        className="w-full p-2 mb-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-        <input 
-        type="text" 
-        placeholder="Enter room number" 
-        value={roomCode} 
-        onChange={(e) => setRoomCode(e.target.value)}
-        className="w-full p-2 mb-3 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-        <button 
-        onClick={handleJoinRoom} 
-        className="w-full p-2 mb-2 bg-blue-500 hover:bg-blue-600 rounded">
-          Join Room
-        </button>
-        <button 
-        onClick={handleCreateRoom} 
-        className="w-full p-2 bg-green-500 hover:bg-green-600 rounded">
-          Create Room
-        </button>
+    // Background jra
+    <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
+      <div className="flex flex-col items-center justify-start pt-10">
+        <div className="mb-4">
+          <Image
+            src="/logo.png"
+            width={200}
+            height={200}
+            alt="LOGO TTT"
+          />
+        </div>
+
+        <div className="w-full max-w-md">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
+          {/* ROOM BOX */}
+            <p className=" flex
+            bg-white bg-opacity-80 border-2
+             border-stone-500 rounded-2xl 
+             text-center text-gray-600 
+             justify-center
+             mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
+          
+          {/* Waiting player */}
+          <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
+          
+          {/* Table player */}
+          <div className="overflow-x-auto">
+            <ul className="w-full border border-gray-200 rounded-lg p-3">
+              {players.map((player) => (
+                <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
+                  <span>{player.name}</span>
+                  <span className="text-gray-500">{player.id}/10</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button className="mt-4 w-full bg-stone-800 text-white  p-2 rounded-lg hover:bg-stone-600">
+            ! Start Game !
+          </button>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Lobby;
