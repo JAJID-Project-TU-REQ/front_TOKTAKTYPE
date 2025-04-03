@@ -24,77 +24,102 @@ export default function LoginPage() {
     if (name && roomCode) {
       try {
         const response = await joinRoom(roomCode, name);
-  const handleJoinRoom = async () => {
-    if (name && roomCode) {
-      try {
-        const response = await joinRoom(roomCode, name);
-
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("WebSocket disconnected, reconnecting...");
-        connectWebSocket(roomCode, playerName, isCreateRoom === "true");
+  
+        if (response.success) { 
+          connectWebSocket(roomCode, name, false);
+          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
+        } else {
+          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
+        }
+      } catch (error) {
+        console.error("Error joining room:", error);
       }
-
-      loadPlayers(roomCode); // ⬅️ ใช้ฟังก์ชันที่ย้ายไป `api.tsx`
     }
-  }, [roomCode, playerName, isCreateRoom]);
+  };
+  
 
-  const loadPlayers = async (roomCode: string) => {
-    try {
-      const data = await fetchPlayerNames(roomCode); // ⬅️ ใช้ API ที่ย้ายไป
-      const playersWithId = data.players.map((name, index) => ({
-        id: index + 1, // ใช้ index เป็น id หากไม่มี id จาก API
-        name,
-      }));
-      setPlayers(playersWithId); // ตั้งค่าให้เป็น Player[]
-    } catch (error) {
-      console.error("Error fetching player names:", error);
+  const handleCreateRoom = async () => {
+    if (name) {
+      const response = await createRoom(name);
+      setRoomCode(response.roomCode);  
+
+      connectWebSocket(response.roomCode, name, true); 
+      router.push(`/lobby?roomCode=${response.roomCode}&playerName=${name}&isCreateRoom=true`);
+    } else {
+      console.error("Name is required");
     }
   };
 
   return (
-    // Background jra
-    <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
-      <div className="flex flex-col items-center justify-start pt-10">
-        <div className="mb-4">
-          <Image
-            src="/logo.png"
-            width={200}
-            height={200}
-            alt="LOGO TTT"
-          />
+    <div className="flex items-center justify-center 
+    min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
+      <div className="p-6 w-96 text-center
+       bg-white text-white rounded-xl">
+
+      <Image
+        src="/logo.png"
+        width={350}
+        height={300}
+        alt="Picture of the author"
+      />
+
+      {/* Character pick */}
+      <div className="flex flex-col items-center gap-2 p-2">
+      <h1 className="text-xl font-bold text-black">Select Your Character</h1>
+      <div className="flex gap-4">
+
+        {character.map((char) => (
+          <motion.div
+            key={char.id}
+            className={`w-24 h-24 rounded-lg flex items-center justify-center cursor-pointer text-lg font-bold shadow-lg transition-all border-2 ${
+              selected === char.id ? "scale-110 border-stone-500" : "border-transparent"
+            }`}
+            onClick={() => setSelected(char.id)}
+            whileHover={{ scale: 1.1 }}
+          >
+            <Image
+            src={char.image} 
+            alt={char.name} 
+            width={96}
+            height={96}
+            className="w-full h-full object-cover rounded-lg"
+            priority ={selected === char.id}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Name input box */}
+        <h2 className="text-xl font-bold mb-2 mt-3 text-black">Join or Create a Room</h2>
+        <input type="text" 
+        placeholder="Enter your name" 
+        value={name} onChange={(e) => setName(e.target.value)} 
+        className="w-full p-3 rounded-xl text-black border
+         border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      
+        {/* Room number */}
+         <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
+          <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} type="text" 
+          required className="min-w-0 flex-auto rounded-3xl
+           bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10
+            placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" 
+            placeholder="Enter Room code" />
+
+          <button onClick={handleJoinRoom} type="submit" 
+          className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            Join room</button> 
         </div>
 
-        <div className="w-full max-w-md">
-          <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
-          {/* ROOM BOX */}
-            <p className=" flex
-            bg-white bg-opacity-80 border-2
-             border-stone-500 rounded-2xl 
-             text-center text-gray-600 
-             justify-center
-             mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
-          
-          {/* Waiting player */}
-          <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
-          
-          {/* Table player */}
-          <div className="overflow-x-auto">
-            <ul className="w-full border border-gray-200 rounded-lg p-3">
-              {players.map((player) => (
-                <li key={player.id} className="p-2 border-b text-black border-gray-300 last:border-b-0 flex justify-between">
-                  <span>{player.name}</span>
-                  <span className="text-gray-500">{player.id}/10</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <button className="mt-4 w-full bg-stone-800 text-white  p-2 rounded-lg hover:bg-stone-600">
-            ! Start Game !
-          </button>
-        </div>
+        <button onClick={handleCreateRoom} 
+        className="w-10/12 p-2 bg-black
+         hover:bg-stone-800 
+         rounded-3xl">
+          Create Room
+        </button>
+
       </div>
     </div>
+    </div>
   );
-};
+}
 
-export default Lobby;

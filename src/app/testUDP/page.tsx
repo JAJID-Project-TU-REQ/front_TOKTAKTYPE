@@ -15,7 +15,7 @@ function UdpSender() {
         },
         body: JSON.stringify({
           message: 'Hello World',
-          targetIp: '10.4.12.157', 
+          targetIp: '172.25.201.61', 
           targetPort: 41232,    
         }),
       });
