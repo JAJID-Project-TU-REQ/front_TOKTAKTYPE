@@ -1,8 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+<<<<<<< HEAD
 // import { createRoom, joinRoom } from "../utils/Api";
 // import { connectWebSocket } from "../utils/WebSocket";
+=======
+import { createRoom, joinRoom } from "./utils/Api";
+import { connectWebSocket } from "./utils/WebSocket";
+>>>>>>> 913ca8af47b4c8ea2180273247c0b31f3c805ea2
 import Image from 'next/image'
 import { motion } from "framer-motion";
 
@@ -24,6 +29,7 @@ export default function LoginPage() {
     if (name && roomCode) {
       try {
         const response = await joinRoom(roomCode, name);
+<<<<<<< HEAD
   
         if (response.success) { 
           connectWebSocket(roomCode, name, false);
@@ -33,6 +39,16 @@ export default function LoginPage() {
         }
       } catch (error) {
         console.error("Error joining room:", error);
+=======
+  const handleJoinRoom = async () => {
+    if (name && roomCode) {
+      try {
+        const response = await joinRoom(roomCode, name);
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("WebSocket disconnected, reconnecting...");
+        connectWebSocket(roomCode, playerName, isCreateRoom === "true");
+>>>>>>> 913ca8af47b4c8ea2180273247c0b31f3c805ea2
       }
     }
   };

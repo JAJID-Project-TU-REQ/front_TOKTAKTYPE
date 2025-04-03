@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, use } from 'react';
+import Image from 'next/image'
 
 const MonkeyType = () => {
     const [text, setText] = useState('');
@@ -148,10 +149,19 @@ const MonkeyType = () => {
     };
 
     return (
+        <div className="flex items-center justify-center 
+        min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
         <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg"
             onClick={focusInput}
         >
-            <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6">TTT</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 flex justify-center">
+                 <Image
+                        src="/logo.png"
+                        width={80}
+                        height={100}
+                        alt="Picture of the author"
+                 />
+            </h1>
 
             <div className="mb-4 sm:mb-8"
                 onClick={focusInput}
@@ -197,6 +207,7 @@ const MonkeyType = () => {
                 {isFinished ? "Try Again" : "Reset"}
             </button>
         </div>
+    </div>
     );
 };
 
