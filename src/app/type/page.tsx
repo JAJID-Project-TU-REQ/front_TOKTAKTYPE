@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, use } from 'react';
+import Image from 'next/image'
 
 const MonkeyType = () => {
     const [text, setText] = useState('');
@@ -148,18 +149,33 @@ const MonkeyType = () => {
     };
 
     return (
-        <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg"
+        <div className="flex items-center justify-center 
+        min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
+        <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
             onClick={focusInput}
         >
-            <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6">TTT</h1>
+            
+            <div className="flex justify-center gap-72 mb-4 mt-2">
+                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮 NAME : </div>
+                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2"> 🏆 RANKING : </div>
+        
+                </div>
+            <h1 className=" text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
+                 <Image
+                        src="/logo.png"
+                        width={200}
+                        height={100}
+                        alt="Picture of the author"
+                 />
+            </h1>
+            <h1 className="text-lg text-center mt-0 p-2 mb-2">
+             TIME : {Math.floor(((isFinished ? endTime : Date.now()) - (startTime || Date.now())) / 60000)}m {Math.floor((((isFinished ? endTime : Date.now()) - (startTime || Date.now())) % 60000) / 1000)}s
+            </h1>
+
 
             <div className="mb-4 sm:mb-8"
                 onClick={focusInput}
             >
-                <div className="flex justify-between mb-2">
-                    <div className="text-base sm:text-lg font-semibold">WPM: {wpm}</div>
-                    <div className="text-base sm:text-lg font-semibold">Accuracy: {accuracy}%</div>
-                </div>
 
                 <div
                     ref={textDisplayRef}
@@ -180,11 +196,17 @@ const MonkeyType = () => {
 
             </div>
 
+            <div className="flex justify-center gap-20 mb-4 mt-2">
+                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮WPM: {wpm}</div>
+                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">♥️ Accuracy: {accuracy}%</div>
+        
+                </div>
+
             {isFinished && (
                 <div className="mb-4 p-2 sm:p-4 rounded-lg">
                     <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Results</h2>
-                    <p className="text-sm sm:text-base">WPM: {wpm}</p>
-                    <p className="text-sm sm:text-base">Accuracy: {accuracy}%</p>
+                    <p className="text-sm sm:text-base"> WPM: {wpm}</p>
+                    <p className="text-sm sm:text-base">  Accuracy: {accuracy}%</p>
                     <p className="text-sm sm:text-base">Mistakes: {mistakes}</p>
                     <p className="text-sm sm:text-base">Time: {((endTime - startTime) / 1000).toFixed(2)} seconds</p>
                 </div>
@@ -192,11 +214,12 @@ const MonkeyType = () => {
 
             <button
                 onClick={resetTest}
-                className="w-full p-2 text-white rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
+                className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
             >
                 {isFinished ? "Try Again" : "Reset"}
             </button>
         </div>
+    </div>
     );
 };
 
