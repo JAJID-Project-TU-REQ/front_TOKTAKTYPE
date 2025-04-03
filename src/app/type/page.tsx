@@ -168,7 +168,9 @@ const MonkeyType = () => {
                         alt="Picture of the author"
                  />
             </h1>
-            <h1 className="text-lg text-center mt-0 p-2 mb-2"> ROUND TIME : 00m 00s</h1>
+            <h1 className="text-lg text-center mt-0 p-2 mb-2">
+             TIME : {Math.floor(((isFinished ? endTime : Date.now()) - (startTime || Date.now())) / 60000)}m {Math.floor((((isFinished ? endTime : Date.now()) - (startTime || Date.now())) % 60000) / 1000)}s
+            </h1>
 
 
             <div className="mb-4 sm:mb-8"
