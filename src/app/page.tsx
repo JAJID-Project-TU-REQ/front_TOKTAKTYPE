@@ -1,25 +1,33 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";  // ใช้ useSearchParams เพื่อดึง query params
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createRoom, joinRoom } from "./utils/Api";
+import { connectWebSocket } from "./utils/WebSocket";
+import Image from 'next/image'
+import { motion } from "framer-motion";
 
-import Image from 'next/image';
+export default function LoginPage() {
+  const [name, setName] = useState<string>("");
+  const [roomCode, setRoomCode] = useState<string>("");
+  const router = useRouter();
 
-interface Player {
-  id: number;
-  name: string;
-}
-
-const Lobby: React.FC = () => {
-  const searchParams = useSearchParams();  // ใช้ useSearchParams
-  const roomCode = searchParams.get("roomCode");
-  const playerName = searchParams.get("playerName");
-  const isCreateRoom = searchParams.get("isCreateRoom");
-
-  const [players, setPlayers] = useState<Player[]>([]);
-
-  useEffect(() => {
-    if (roomCode && playerName && isCreateRoom !== null) {
-      const ws = getWebSocket();
+  const character = [
+    { id: 1, name: "Borhk" , image: "/Apple boy.svg"},
+    { id: 2, name: "aL" , image: "/Blue boy.svg"},
+    { id: 3, name: "Victoria" , image: "/flow.svg"},
+    { id: 4, name: "Vocalno", image: "/red.svg"},
+    { id: 5, name: "Solanum" , image: "/Tomato.svg"}
+  ]
+  const [selected,setSelected] = useState<number | null>(null);
+  
+  const handleJoinRoom = async () => {
+    if (name && roomCode) {
+      try {
+        const response = await joinRoom(roomCode, name);
+  const handleJoinRoom = async () => {
+    if (name && roomCode) {
+      try {
+        const response = await joinRoom(roomCode, name);
 
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         console.log("WebSocket disconnected, reconnecting...");
