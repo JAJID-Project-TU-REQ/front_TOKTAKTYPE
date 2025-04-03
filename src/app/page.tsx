@@ -24,12 +24,6 @@ export default function LoginPage() {
     if (name && roomCode) {
       try {
         const response = await joinRoom(roomCode, name);
-  
-        if (response.success) { 
-          connectWebSocket(roomCode, name, false);
-          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
-        } else {
-          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
 
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           console.log("WebSocket disconnected, reconnecting...");
