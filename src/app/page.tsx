@@ -1,13 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
-// import { createRoom, joinRoom } from "../utils/Api";
-// import { connectWebSocket } from "../utils/WebSocket";
-=======
 import { createRoom, joinRoom } from "./utils/Api";
 import { connectWebSocket } from "./utils/WebSocket";
->>>>>>> 913ca8af47b4c8ea2180273247c0b31f3c805ea2
 import Image from 'next/image'
 import { motion } from "framer-motion";
 
@@ -29,26 +24,16 @@ export default function LoginPage() {
     if (name && roomCode) {
       try {
         const response = await joinRoom(roomCode, name);
-<<<<<<< HEAD
-  
-        if (response.success) { 
-          connectWebSocket(roomCode, name, false);
-          router.push(`/lobby?roomCode=${roomCode}&playerName=${name}&isCreateRoom=false`);
-        } else {
-          console.error("Failed to join room:", response.error || "Unknown error"); // ✅ ตอนนี้ TypeScript ไม่แจ้ง error แล้ว
+
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.log("WebSocket disconnected, reconnecting...");
+          const ws = null; // Define ws if not already defined
+          const playerName = name; // Use name as playerName
+          const isCreateRoom = false; // Set isCreateRoom to false for joining
+          connectWebSocket(roomCode, playerName, isCreateRoom);
         }
       } catch (error) {
         console.error("Error joining room:", error);
-=======
-  const handleJoinRoom = async () => {
-    if (name && roomCode) {
-      try {
-        const response = await joinRoom(roomCode, name);
-
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("WebSocket disconnected, reconnecting...");
-        connectWebSocket(roomCode, playerName, isCreateRoom === "true");
->>>>>>> 913ca8af47b4c8ea2180273247c0b31f3c805ea2
       }
     }
   };
@@ -159,4 +144,3 @@ export default function LoginPage() {
 
   );
 }
-
