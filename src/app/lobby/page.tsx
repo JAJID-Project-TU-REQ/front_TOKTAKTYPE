@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";  // ใช้ useSearchParams เพื่อดึง query params
 import { getWebSocket, connectWebSocket } from "../utils/WebSocket";
-import { fetchPlayerNames } from "../utils/Api";
 import Image from 'next/image';
 
 interface Player {
@@ -22,27 +21,79 @@ const Lobby: React.FC = () => {
     if (roomCode && playerName && isCreateRoom !== null) {
       const ws = getWebSocket();
 
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("WebSocket disconnected, reconnecting...");
+      if (!ws || !ws.connected) {
+        console.log("Socket.IO disconnected, reconnecting...");
         connectWebSocket(roomCode, playerName, isCreateRoom === "true");
       }
 
-      loadPlayers(roomCode); // ⬅️ ใช้ฟังก์ชันที่ย้ายไป `api.tsx`
+      // เพิ่ม event listener สำหรับรับข้อมูลผู้เล่นจาก Socket.IO
+      const handlePlayerListUpdate = (event: CustomEvent) => {
+        const playersData = event.detail;
+        console.log("Received player list update:", playersData);
+        const playersWithId = playersData.map((player: any, index: number) => ({
+          id: index + 1,
+          name: player.name,
+        }));
+        setPlayers(playersWithId);
+      };
+      
+      // เพิ่ม event listener สำหรับข้อผิดพลาดจาก Socket.IO
+      const handleSocketError = (event: CustomEvent) => {
+        const errorMessage = event.detail;
+        console.error("Socket error:", errorMessage);
+        alert(errorMessage);
+        // ถ้าเกิดข้อผิดพลาด ให้กลับไปยังหน้าหลัก
+        window.location.href = '/';
+      };
+
+      window.addEventListener('playerListUpdated', handlePlayerListUpdate as EventListener);
+      window.addEventListener('socketError', handleSocketError as EventListener);
+
+      // ตรวจสอบข้อมูลผู้เล่นที่บันทึกไว้ใน localStorage
+      const savedPlayerList = localStorage.getItem(`playerList_${roomCode}`);
+      if (savedPlayerList) {
+        try {
+          const playersData = JSON.parse(savedPlayerList);
+          console.log("Loading saved player list from localStorage:", playersData);
+          const playersWithId = playersData.map((player: any, index: number) => ({
+            id: index + 1,
+            name: player.name,
+          }));
+          setPlayers(playersWithId);
+        } catch (error) {
+          console.error("Error parsing saved player list:", error);
+        }
+      }
+
+      // ร้องขอข้อมูลผู้เล่นปัจจุบันจาก server เมื่อเข้าสู่หน้า lobby
+      if (ws && ws.connected) {
+        console.log("Requesting current player list for room:", roomCode);
+        ws.emit('requestPlayerList', roomCode);
+      }
+
+      return () => {
+        window.removeEventListener('playerListUpdated', handlePlayerListUpdate as EventListener);
+        window.removeEventListener('socketError', handleSocketError as EventListener);
+      };
     }
   }, [roomCode, playerName, isCreateRoom]);
 
-  const loadPlayers = async (roomCode: string) => {
-    try {
-      const data = await fetchPlayerNames(roomCode); // ⬅️ ใช้ API ที่ย้ายไป
-      const playersWithId = data.players.map((name, index) => ({
-        id: index + 1, // ใช้ index เป็น id หากไม่มี id จาก API
-        name,
-      }));
-      setPlayers(playersWithId); // ตั้งค่าให้เป็น Player[]
-    } catch (error) {
-      console.error("Error fetching player names:", error);
+  // เพิ่ม useEffect เพื่อร้องขอข้อมูลผู้เล่นทุก 2 วินาที เพื่อให้แน่ใจว่าข้อมูลเป็นปัจจุบัน
+  useEffect(() => {
+    if (roomCode) {
+      const intervalId = setInterval(() => {
+        const ws = getWebSocket();
+        if (ws && ws.connected) {
+          ws.emit('requestPlayerList', roomCode);
+        }
+      }, 2000); // ร้องขอทุก 2 วินาที
+
+      return () => clearInterval(intervalId);
     }
-  };
+  }, [roomCode]);
+
+  // ไม่จำเป็นต้องใช้ loadPlayers อีกต่อไป เพราะเราใช้ข้อมูลจาก WebSocket โดยตรง
+  // ฟังก์ชันนี้ถูกแทนที่ด้วย event listener 'playerListUpdated' ที่รับข้อมูลจาก WebSocket
 
   return (
     // Background jra
@@ -62,10 +113,10 @@ const Lobby: React.FC = () => {
           {/* ROOM BOX */}
             <p className=" flex
             bg-white bg-opacity-80 border-2
-             border-stone-500 rounded-2xl 
-             text-center text-gray-600 
-             justify-center
-             mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
+            border-stone-500 rounded-2xl 
+            text-center text-gray-600 
+            justify-center
+            mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode}</span></p>
           
           {/* Waiting player */}
           <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
@@ -81,7 +132,16 @@ const Lobby: React.FC = () => {
               ))}
             </ul>
           </div>
-          <button className="mt-4 w-full bg-stone-800 text-white  p-2 rounded-lg hover:bg-stone-600">
+          <button 
+            className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
+            onClick={() => {
+              if (roomCode) {
+                // เรียกใช้ฟังก์ชัน startGame จาก WebSocket.ts
+                const { startGame } = require('../utils/WebSocket');
+                startGame(roomCode);
+              }
+            }}
+          >
             ! Start Game !
           </button>
         </div>

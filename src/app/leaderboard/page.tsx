@@ -1,5 +1,7 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { getWebSocket, connectWebSocket } from '../utils/WebSocket';
 
 // Types for our data
 interface Player {
@@ -8,20 +10,55 @@ interface Player {
   rank: number;
 }
 
-interface GameProps {
-  currentPlayer: string;
-  players?: Player[]; // Make players optional
-  maxPlayers: number;
-  gameCode: string;
-}
+// ไม่จำเป็นต้องใช้ GameProps เนื่องจากเราใช้ URL parameters แทน
 
-const TokTakTypeLeaderboard: React.FC<GameProps> = ({
-  currentPlayer,
-  players = [], // Default to empty array
-  maxPlayers,
-  gameCode
-}) => {
-  // Mock data - you can replace this with actual data
+const TokTakTypeLeaderboard: React.FC = () => {
+  const searchParams = useSearchParams();
+  const roomCode = searchParams.get("roomCode");
+  const playerName = searchParams.get("playerName");
+  
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [maxPlayers, setMaxPlayers] = useState<number>(10);
+  
+  useEffect(() => {
+    if (roomCode && playerName) {
+      // ตรวจสอบการเชื่อมต่อ WebSocket
+      const ws = getWebSocket();
+      if (!ws || !ws.connected) {
+        console.log("Socket.IO disconnected, reconnecting...");
+        connectWebSocket(roomCode, playerName, false);
+      }
+      
+      // ดึงข้อมูลผลการแข่งขันจาก localStorage
+      const savedResults = localStorage.getItem(`gameResults_${roomCode}`);
+      if (savedResults) {
+        try {
+          const resultsData = JSON.parse(savedResults);
+          console.log("Loading game results from localStorage:", resultsData);
+          
+          // แปลงข้อมูลให้อยู่ในรูปแบบที่ต้องการแสดงผล
+          const sortedPlayers = resultsData
+            .map((player: any, index: number) => ({
+              name: player.name,
+              wpm: player.wpm || 0,
+              rank: index + 1
+            }))
+            .sort((a: Player, b: Player) => b.wpm - a.wpm)
+            .map((player: Player, index: number) => ({
+              ...player,
+              rank: index + 1
+            }));
+          
+          setPlayers(sortedPlayers);
+          setMaxPlayers(sortedPlayers.length);
+        } catch (error) {
+          console.error("Error parsing saved game results:", error);
+        }
+      }
+    }
+  }, [roomCode, playerName]);
+  
+  // ถ้าไม่มีข้อมูลผู้เล่น ให้ใช้ข้อมูลจำลอง
   const mockPlayers: Player[] = [
     { name: "jaymin", wpm: 75, rank: 1 },
     { name: "dew", wpm: 68, rank: 2 },
@@ -30,8 +67,8 @@ const TokTakTypeLeaderboard: React.FC<GameProps> = ({
     { name: "aom", wpm: 50, rank: 5 },
   ];
 
-  // Use mock data if players array is empty
-  const displayPlayers = players && players.length > 0 ? players : mockPlayers;
+  // ใช้ข้อมูลจริงถ้ามี หรือใช้ข้อมูลจำลองถ้าไม่มี
+  const displayPlayers = players.length > 0 ? players : mockPlayers;
 
   return (
     <div className="leaderboard-container" style={{
@@ -78,7 +115,7 @@ const TokTakTypeLeaderboard: React.FC<GameProps> = ({
           fontWeight: 'bold',
           fontSize: '18px'
         }}>
-          {currentPlayer} <span style={{ marginLeft: '5px' }}>🎮</span>
+          {playerName} <span style={{ marginLeft: '5px' }}>🎮</span>
         </div>
       </div>
 
@@ -99,7 +136,7 @@ const TokTakTypeLeaderboard: React.FC<GameProps> = ({
           padding: '5px 15px',
           borderRadius: '20px'
         }}>
-          code : {gameCode}
+          code : {roomCode}
         </div>
       </div>
 
@@ -119,7 +156,7 @@ const TokTakTypeLeaderboard: React.FC<GameProps> = ({
               justifyContent: 'space-between',
               padding: '12px 20px',
               borderBottom: index < displayPlayers.length - 1 ? '1px solid #eee' : 'none',
-              backgroundColor: player.name === currentPlayer ? '#f9f9f9' : 'white'
+              backgroundColor: player.name === playerName ? '#f9f9f9' : 'white'
             }}
           >
             <div className="player-name">{player.name}</div>
@@ -134,6 +171,27 @@ const TokTakTypeLeaderboard: React.FC<GameProps> = ({
         ))}
       </div>
 
+      {/* Play Again Button */}
+      <div className="play-again" style={{
+        textAlign: 'center',
+        marginTop: '20px'
+      }}>
+        <button 
+          style={{
+            backgroundColor: '#4a4a4a',
+            color: 'white',
+            border: 'none',
+            borderRadius: '20px',
+            padding: '10px 25px',
+            fontSize: '16px',
+            cursor: 'pointer',
+            transition: 'background-color 0.3s'
+          }}
+          onClick={() => window.location.href = `/lobby?roomCode=${roomCode}&playerName=${playerName}&isCreateRoom=false`}
+        >
+          Play Again
+        </button>
+      </div>
 
     </div>
   );
@@ -146,8 +204,5 @@ export default TokTakTypeLeaderboard;
 // @import url('https://fonts.googleapis.com/css2?family=Jersey+M54&display=swap');
 
 // You would use the component like this:
-// <TokTakTypeLeaderboard 
-//   currentPlayer="jaymin"
-//   maxPlayers={5}
-//   gameCode="8548"
-// />
+// <TokTakTypeLeaderboard />
+// The component will automatically get roomCode and playerName from URL parameters

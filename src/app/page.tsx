@@ -21,19 +21,26 @@ export default function LoginPage() {
   const [selected,setSelected] = useState<number | null>(null);
   
   const handleJoinRoom = async () => {
-    if (name && roomCode) {
+    if (name && roomCode && roomCode.trim() !== '') {
       try {
         const response = await joinRoom(roomCode, name);
-
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          console.log("WebSocket disconnected, reconnecting...");
-          const ws = null; // Define ws if not already defined
-          const playerName = name; // Use name as playerName
-          const isCreateRoom = false; // Set isCreateRoom to false for joining
-          connectWebSocket(roomCode, playerName, isCreateRoom);
-        }
+        
+        // เชื่อมต่อกับ Socket.IO server และเข้าร่วมห้อง
+        const playerName = name;
+        const isCreateRoom = false;
+        connectWebSocket(roomCode, playerName, isCreateRoom);
+        
+        // นำทางไปยังหน้า lobby
+        router.push(`/lobby?roomCode=${roomCode}&playerName=${playerName}&isCreateRoom=false`);
       } catch (error) {
         console.error("Error joining room:", error);
+        alert("ไม่สามารถเข้าร่วมห้องได้ โปรดตรวจสอบรหัสห้องและลองอีกครั้ง");
+      }
+    } else {
+      if (!name) {
+        alert("กรุณาระบุชื่อของคุณ");
+      } else if (!roomCode || roomCode.trim() === '') {
+        alert("กรุณาระบุรหัสห้อง");
       }
     }
   };
@@ -41,13 +48,18 @@ export default function LoginPage() {
 
   const handleCreateRoom = async () => {
     if (name) {
+      // เชื่อมต่อ WebSocket ก่อน โดยส่งค่า roomCode เป็นค่าว่างเพราะยังไม่มีห้อง
+      // และกำหนด isCreateRoom เป็น true เพื่อให้ WebSocket ส่ง event createRoom
+      connectWebSocket("", name, true);
+      
+      // เรียกใช้ createRoom เพื่อรับ roomCode จาก Socket.IO
       const response = await createRoom(name);
-      setRoomCode(response.roomCode);  
-
-      connectWebSocket(response.roomCode, name, true); 
+      setRoomCode(response.roomCode);
+      
+      // นำทางไปยังหน้า lobby
       router.push(`/lobby?roomCode=${response.roomCode}&playerName=${name}&isCreateRoom=true`);
     } else {
-      console.error("Name is required");
+      alert("กรุณาระบุชื่อของคุณ");
     }
   };
 
