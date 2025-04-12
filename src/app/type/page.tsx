@@ -1,314 +1,313 @@
-"use client";
-import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
-import { getWebSocket, updateWpm, sendGameResults } from '../utils/WebSocket';
-import Timer from '../components/Timer';
+// "use client";
+// import React, { useState, useEffect, useRef } from 'react';
+// import Image from 'next/image';
+// import { useSearchParams } from 'next/navigation';
+// import Timer from '../components/Timer';
 
-const MonkeyType = () => {
-    const searchParams = useSearchParams();
-    const roomCode = searchParams.get("roomCode");
-    const playerName = searchParams.get("playerName");
+// const MonkeyType = () => {
+//     const searchParams = useSearchParams();
+//     const roomCode = searchParams.get("roomCode");
+//     const playerName = searchParams.get("playerName");
     
-    const [text, setText] = useState('');
-    const [userInput, setUserInput] = useState('');
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [startTime, setStartTime] = useState(null);
-    const [endTime, setEndTime] = useState(null);
-    const [wpm, setWpm] = useState(0);
-    const [accuracy, setAccuracy] = useState(100);
-    const [mistakes, setMistakes] = useState(0);
-    const [isFinished, setIsFinished] = useState(false);
-    const [isStarted, setIsStarted] = useState(false);
-    const [hasClicked, setHasClicked] = useState(true); // NEW STAT
-    const inputRef = useRef(null);
-    const textDisplayRef = useRef(null);
+//     const [text, setText] = useState('');
+//     const [userInput, setUserInput] = useState('');
+//     const [currentIndex, setCurrentIndex] = useState(0);
+//     const [startTime, setStartTime] = useState(null);
+//     const [endTime, setEndTime] = useState(null);
+//     const [wpm, setWpm] = useState(0);
+//     const [accuracy, setAccuracy] = useState(100);
+//     const [mistakes, setMistakes] = useState(0);
+//     const [isFinished, setIsFinished] = useState(false);
+//     const [isStarted, setIsStarted] = useState(false);
+//     const [hasClicked, setHasClicked] = useState(true); // NEW STAT
+//     const inputRef = useRef(null);
+//     const textDisplayRef = useRef(null);
 
-    const sampleTexts = [
-        "The quick brown fox jumps over the lazy dog.",
-        "She sells seashells by the seashore.",
-        "How much wood would a woodchuck chuck if a woodchuck could chuck wood?",
-        "In the beginning, the universe was created. This has made a lot of people very angry and been widely regarded as a bad move.",
-        "All that glitters is not gold. All that wander are not lost.",
-    ];
+//     const sampleTexts = [
+//         "The quick brown fox jumps over the lazy dog.",
+//         "She sells seashells by the seashore.",
+//         "How much wood would a woodchuck chuck if a woodchuck could chuck wood?",
+//         "In the beginning, the universe was created. This has made a lot of people very angry and been widely regarded as a bad move.",
+//         "All that glitters is not gold. All that wander are not lost.",
+//     ];
 
-    useEffect(() => {
-        resetTest();
+//     useEffect(() => {
+//         resetTest();
         
-        // รับเหตุการณ์เมื่อเกมเริ่ม
-        const handleGameStarted = (event) => {
-            const data = event.detail;
-            console.log('Game started with data:', data);
+//         // รับเหตุการณ์เมื่อเกมเริ่ม
+//         const handleGameStarted = (event) => {
+//             const data = event.detail;
+//             console.log('Game started with data:', data);
             
-            // ตั้งค่าเวลาเริ่มเกมตามที่ได้รับจาก server
-            if (data && data.startTime) {
-                setStartTime(data.startTime);
-                setIsStarted(true);
-                // Focus input เมื่อเกมเริ่ม
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                }
-            }
-        };
+//             // ตั้งค่าเวลาเริ่มเกมตามที่ได้รับจาก server
+//             if (data && data.startTime) {
+//                 setStartTime(data.startTime);
+//                 setIsStarted(true);
+//                 // Focus input เมื่อเกมเริ่ม
+//                 if (inputRef.current) {
+//                     inputRef.current.focus();
+//                 }
+//             }
+//         };
         
-        // เพิ่ม event listener สำหรับเหตุการณ์เริ่มเกม
-        window.addEventListener('gameStarted', handleGameStarted);
+//         // เพิ่ม event listener สำหรับเหตุการณ์เริ่มเกม
+//         window.addEventListener('gameStarted', handleGameStarted);
         
-        return () => {
-            window.removeEventListener('gameStarted', handleGameStarted);
-        };
-    }, []);
+//         return () => {
+//             window.removeEventListener('gameStarted', handleGameStarted);
+//         };
+//     }, []);
 
-    useEffect(() => {
-        // Focus input เมื่อ component โหลดเสร็จ
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    });
+//     useEffect(() => {
+//         // Focus input เมื่อ component โหลดเสร็จ
+//         if (inputRef.current) {
+//             inputRef.current.focus();
+//         }
+//     });
 
-    const resetTest = () => {
-        const randomIndex = Math.floor(Math.random() * sampleTexts.length);
-        setText(sampleTexts[randomIndex]);
-        setUserInput('');
-        setCurrentIndex(0);
-        setStartTime(null);
-        setEndTime(null);
-        setWpm(0);
-        setAccuracy(100);
-        setMistakes(0);
-        setIsFinished(false);
-        setIsStarted(false);
-        setHasClicked(true);  // Reset the click state too
-        if (inputRef.current) {
-            inputRef.current.blur(); // Remove focus
-        }
-    };
+//     const resetTest = () => {
+//         const randomIndex = Math.floor(Math.random() * sampleTexts.length);
+//         setText(sampleTexts[randomIndex]);
+//         setUserInput('');
+//         setCurrentIndex(0);
+//         setStartTime(null);
+//         setEndTime(null);
+//         setWpm(0);
+//         setAccuracy(100);
+//         setMistakes(0);
+//         setIsFinished(false);
+//         setIsStarted(false);
+//         setHasClicked(true);  // Reset the click state too
+//         if (inputRef.current) {
+//             inputRef.current.blur(); // Remove focus
+//         }
+//     };
 
-    const handleChange = (e) => {
-        const value = e.target.value;
-        const key = e.key;
+//     const handleChange = (e) => {
+//         const value = e.target.value;
+//         const key = e.key;
 
-        // ไม่ต้องตั้งค่า startTime เมื่อผู้เล่นเริ่มพิมพ์
-        // เพราะเราจะใช้ startTime ที่ได้รับจาก server แทน
-        // ซึ่งจะทำให้ผู้เล่นทุกคนเริ่มเล่นพร้อมกัน
+//         // ไม่ต้องตั้งค่า startTime เมื่อผู้เล่นเริ่มพิมพ์
+//         // เพราะเราจะใช้ startTime ที่ได้รับจาก server แทน
+//         // ซึ่งจะทำให้ผู้เล่นทุกคนเริ่มเล่นพร้อมกัน
 
-        if (!isFinished) {
-            setUserInput(value);
+//         if (!isFinished) {
+//             setUserInput(value);
 
 
-            let mistakeCount = 0;
-            for (let i = 0; i < value.length; i++) {
-                if (i < text.length && value[i] !== text[i]) {
-                    mistakeCount++;
-                }
-            }
-            setMistakes(mistakeCount);
+//             let mistakeCount = 0;
+//             for (let i = 0; i < value.length; i++) {
+//                 if (i < text.length && value[i] !== text[i]) {
+//                     mistakeCount++;
+//                 }
+//             }
+//             setMistakes(mistakeCount);
 
-            const calculatedAccuracy = value.length > 0
-                ? ((value.length - mistakeCount) / value.length) * 100
-                : 100;
-            setAccuracy(Math.round(calculatedAccuracy));
+//             const calculatedAccuracy = value.length > 0
+//                 ? ((value.length - mistakeCount) / value.length) * 100
+//                 : 100;
+//             setAccuracy(Math.round(calculatedAccuracy));
 
-            calculateWpm();
+//             calculateWpm();
 
-            if (value.length === text.length) {
-                setEndTime(Date.now());
-                setIsFinished(true);
-            }
+//             if (value.length === text.length) {
+//                 setEndTime(Date.now());
+//                 setIsFinished(true);
+//             }
 
-            setCurrentIndex(value.length);
-        }
-    };
+//             setCurrentIndex(value.length);
+//         }
+//     };
 
-    const calculateWpm = () => {
-        if (startTime && userInput.length > 0) {
-            const currentTime = Date.now();
-            const timeInMinutes = (currentTime - startTime) / 60000;
-            let numCorrectWords = 0;
-            for (let i = 0; i < text.split(' ').length; i++) {
-                    if (text.split(' ')[i] === userInput.split(' ')[i]) {
-                        numCorrectWords++;
-                    }
-            }
-            const calculatedWpm = Math.round(numCorrectWords / timeInMinutes);
-            setWpm(calculatedWpm);
+//     const calculateWpm = () => {
+//         if (startTime && userInput.length > 0) {
+//             const currentTime = Date.now();
+//             const timeInMinutes = (currentTime - startTime) / 60000;
+//             let numCorrectWords = 0;
+//             for (let i = 0; i < text.split(' ').length; i++) {
+//                     if (text.split(' ')[i] === userInput.split(' ')[i]) {
+//                         numCorrectWords++;
+//                     }
+//             }
+//             const calculatedWpm = Math.round(numCorrectWords / timeInMinutes);
+//             setWpm(calculatedWpm);
             
-            // ส่งค่า WPM ไปยัง server ผ่าน Socket.IO
-            if (roomCode) {
-                updateWpm(roomCode, calculatedWpm);
-            }
-        } else {
-            setWpm(0);
-        }
-    };
+//             // ส่งค่า WPM ไปยัง server ผ่าน Socket.IO
+//             if (roomCode) {
+//                 updateWpm(roomCode, calculatedWpm);
+//             }
+//         } else {
+//             setWpm(0);
+//         }
+//     };
 
-    const focusInput = () => {
-        if (inputRef.current && !isFinished) {
-            inputRef.current.focus();
-        }
-    };
+//     const focusInput = () => {
+//         if (inputRef.current && !isFinished) {
+//             inputRef.current.focus();
+//         }
+//     };
 
-    const renderText = () => {
-        return (
-            <div className="font-mono text-lg relative">
-                <div className="flex flex-wrap">
-                    {text.split('').map((char, index) => {
-                        let className = "relative";
-                        let content = char;
-                        if (index < userInput.length) {
-                            const isCorrect = userInput[index] === char;
-                            className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
-                            content = userInput[index];
-                            if (userInput[index] === " " && char !== " ") {
-                                content = "_";
-                            }
-                        } else {
-                            className += " text-gray-400";
+//     const renderText = () => {
+//         return (
+//             <div className="font-mono text-lg relative">
+//                 <div className="flex flex-wrap">
+//                     {text.split('').map((char, index) => {
+//                         let className = "relative";
+//                         let content = char;
+//                         if (index < userInput.length) {
+//                             const isCorrect = userInput[index] === char;
+//                             className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
+//                             content = userInput[index];
+//                             if (userInput[index] === " " && char !== " ") {
+//                                 content = "_";
+//                             }
+//                         } else {
+//                             className += " text-gray-400";
 
-                            if (index === currentIndex && !isFinished) {
-                                className += " border-l-2 border-gray-600 animate-pulse";
-                            }
-                        }
+//                             if (index === currentIndex && !isFinished) {
+//                                 className += " border-l-2 border-gray-600 animate-pulse";
+//                             }
+//                         }
 
-                        return (
-                            <span key={index} className={className} style={{ width: char === " " ? "0.5em" : "auto" }}>
-                                {content}
-                            </span>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
+//                         return (
+//                             <span key={index} className={className} style={{ width: char === " " ? "0.5em" : "auto" }}>
+//                                 {content}
+//                             </span>
+//                         );
+//                     })}
+//                 </div>
+//             </div>
+//         );
+//     };
 
-    return (
-        <div className="flex items-center justify-center 
-        min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
-        <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
-            onClick={focusInput}
-        >
+//     return (
+//         <div className="flex items-center justify-center 
+//         min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
+//         <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
+//             onClick={focusInput}
+//         >
             
-            <div className="flex justify-center gap-72 mb-4 mt-2">
-                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮 NAME : {playerName || 'Player'}</div>
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2"> 🏆 RANKING : </div>
+//             <div className="flex justify-center gap-72 mb-4 mt-2">
+//                     <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮 NAME : {playerName || 'Player'}</div>
+//                     <div className="text-base sm:text-lg font-semibold rounded-lg p-2"> 🏆 RANKING : </div>
         
-                </div>
-            <h1 className=" text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
-                 <Image
-                        src="/logo.png"
-                        width={200}
-                        height={100}
-                        alt="Picture of the author"
-                 />
-            </h1>
-            <h1 className="text-lg text-center mt-0 p-2 mb-2">
-             <Timer 
-                startTime={startTime} 
-                endTime={endTime} 
-                isFinished={isFinished} 
-                isStarted={isStarted} 
-                className="mx-auto"
-                countdownMode={true}
-                countdownTime={30000} // 30 seconds
-                onTimeUp={() => {
-                    if (!isFinished) {
-                        setIsFinished(true);
-                        setEndTime(Date.now());
-                        // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์เมื่อเวลาหมด
-                        if (roomCode) {
-                            sendGameResults(
-                                roomCode, 
-                                wpm, 
-                                accuracy, 
-                                mistakes, 
-                                30 // เวลาที่ใช้คือ 30 วินาที (เต็มเวลา)
-                            );
-                        }
-                    }
-                }}
-             />
-            </h1>
+//                 </div>
+//             <h1 className=" text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
+//                  <Image
+//                         src="/logo.png"
+//                         width={200}
+//                         height={100}
+//                         alt="Picture of the author"
+//                  />
+//             </h1>
+//             <h1 className="text-lg text-center mt-0 p-2 mb-2">
+//              <Timer 
+//                 startTime={startTime} 
+//                 endTime={endTime} 
+//                 isFinished={isFinished} 
+//                 isStarted={isStarted} 
+//                 className="mx-auto"
+//                 countdownMode={true}
+//                 countdownTime={30000} // 30 seconds
+//                 onTimeUp={() => {
+//                     if (!isFinished) {
+//                         setIsFinished(true);
+//                         setEndTime(Date.now());
+//                         // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์เมื่อเวลาหมด
+//                         if (roomCode) {
+//                             sendGameResults(
+//                                 roomCode, 
+//                                 wpm, 
+//                                 accuracy, 
+//                                 mistakes, 
+//                                 30 // เวลาที่ใช้คือ 30 วินาที (เต็มเวลา)
+//                             );
+//                         }
+//                     }
+//                 }}
+//              />
+//             </h1>
 
 
-            <div className="mb-4 sm:mb-8"
-                onClick={focusInput}
-            >
+//             <div className="mb-4 sm:mb-8"
+//                 onClick={focusInput}
+//             >
 
-                <div
-                    ref={textDisplayRef}
-                    className="p-2 sm:p-4 rounded-lg shadow mb-4 min-h-24 sm:h-32 flex items-center cursor-text overflow-x-auto"
-                >
-                    {renderText()}
-                </div>
+//                 <div
+//                     ref={textDisplayRef}
+//                     className="p-2 sm:p-4 rounded-lg shadow mb-4 min-h-24 sm:h-32 flex items-center cursor-text overflow-x-auto"
+//                 >
+//                     {renderText()}
+//                 </div>
 
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={userInput}
-                    onChange={handleChange}
-                    disabled={isFinished} 
-                    className="p-2 border-2 border-gray-300 rounded text-lg font-mono focus:outline-none focus:border-blue-500 opacity-0 absolute"
-                    autoFocus
-                />
+//                 <input
+//                     ref={inputRef}
+//                     type="text"
+//                     value={userInput}
+//                     onChange={handleChange}
+//                     disabled={isFinished} 
+//                     className="p-2 border-2 border-gray-300 rounded text-lg font-mono focus:outline-none focus:border-blue-500 opacity-0 absolute"
+//                     autoFocus
+//                 />
 
-            </div>
+//             </div>
 
-            <div className="flex justify-center gap-20 mb-4 mt-2">
-                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮WPM: {wpm}</div>
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">♥️ Accuracy: {accuracy}%</div>
+//             <div className="flex justify-center gap-20 mb-4 mt-2">
+//                     <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮WPM: {wpm}</div>
+//                     <div className="text-base sm:text-lg font-semibold rounded-lg p-2">♥️ Accuracy: {accuracy}%</div>
         
-                </div>
+//                 </div>
 
-            {isFinished && (
-                <div className="mb-4 p-2 sm:p-4 rounded-lg">
-                    <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Results</h2>
-                    <p className="text-sm sm:text-base"> WPM: {wpm}</p>
-                    <p className="text-sm sm:text-base">  Accuracy: {accuracy}%</p>
-                    <p className="text-sm sm:text-base">Mistakes: {mistakes}</p>
-                    <div className="text-sm sm:text-base flex items-center">
-                        <span className="mr-2">Time:</span>
-                        <Timer 
-                            startTime={startTime} 
-                            endTime={endTime} 
-                            isFinished={isFinished} 
-                            isStarted={true} 
-                            className="inline-block"
-                            countdownMode={false} 
-                        />
-                    </div>
-                    <button
-                        onClick={() => {
-                            if (roomCode) {
-                                // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์
-                                sendGameResults(
-                                    roomCode, 
-                                    wpm, 
-                                    accuracy, 
-                                    mistakes, 
-                                    ((endTime - startTime) / 1000)
-                                );
-                                // นำทางไปยังหน้า leaderboard
-                                window.location.href = `/leaderboard?roomCode=${roomCode}&playerName=${playerName}`;
-                            }
-                        }}
-                        className="mt-4 w-full p-2 bg-stone-800 text-white rounded-lg hover:bg-stone-600 transition"
-                    >
-                        View Leaderboard
-                    </button>
-                </div>
-            )}
+//             {isFinished && (
+//                 <div className="mb-4 p-2 sm:p-4 rounded-lg">
+//                     <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Results</h2>
+//                     <p className="text-sm sm:text-base"> WPM: {wpm}</p>
+//                     <p className="text-sm sm:text-base">  Accuracy: {accuracy}%</p>
+//                     <p className="text-sm sm:text-base">Mistakes: {mistakes}</p>
+//                     <div className="text-sm sm:text-base flex items-center">
+//                         <span className="mr-2">Time:</span>
+//                         <Timer 
+//                             startTime={startTime} 
+//                             endTime={endTime} 
+//                             isFinished={isFinished} 
+//                             isStarted={true} 
+//                             className="inline-block"
+//                             countdownMode={false} 
+//                         />
+//                     </div>
+//                     <button
+//                         onClick={() => {
+//                             if (roomCode) {
+//                                 // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์
+//                                 sendGameResults(
+//                                     roomCode, 
+//                                     wpm, 
+//                                     accuracy, 
+//                                     mistakes, 
+//                                     ((endTime - startTime) / 1000)
+//                                 );
+//                                 // นำทางไปยังหน้า leaderboard
+//                                 window.location.href = `/leaderboard?roomCode=${roomCode}&playerName=${playerName}`;
+//                             }
+//                         }}
+//                         className="mt-4 w-full p-2 bg-stone-800 text-white rounded-lg hover:bg-stone-600 transition"
+//                     >
+//                         View Leaderboard
+//                     </button>
+//                 </div>
+//             )}
 
-            {isFinished && (
-                <button
-                    onClick={resetTest}
-                    className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
-                >
-                    Try Again
-                </button>
-            )}
-        </div>
-    </div>
-    );
-};
+//             {isFinished && (
+//                 <button
+//                     onClick={resetTest}
+//                     className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
+//                 >
+//                     Try Again
+//                 </button>
+//             )}
+//         </div>
+//     </div>
+//     );
+// };
 
-export default MonkeyType;
+// export default MonkeyType;

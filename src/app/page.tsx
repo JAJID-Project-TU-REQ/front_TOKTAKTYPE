@@ -1,15 +1,84 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import { useRouter } from "next/navigation";
-import { createRoom, joinRoom } from "./utils/Api";
-import { connectWebSocket } from "./utils/WebSocket";
 import Image from 'next/image'
 import { motion } from "framer-motion";
+import { useSocket } from "./utils/socketContext";
+import { 
+        onPlayerIdReceived,
+        createRoom,
+        joinRoom
+      } from "./utils/socketClient";
 
 export default function LoginPage() {
+  const { socket } = useSocket();
+  const router = useRouter();
   const [name, setName] = useState<string>("");
   const [roomCode, setRoomCode] = useState<string>("");
-  const router = useRouter();
+
+  
+  // const router = useRouter();
+
+  useEffect(() => {
+    if (socket) {
+      const existingPlayerId = localStorage.getItem("playerId");
+      if (!existingPlayerId) {
+        onPlayerIdReceived(socket, (playerId: string) => {
+          localStorage.setItem("playerId", playerId);
+          console.log("👤 Player ID received:", playerId);
+        });
+      } else {
+        console.log("👤 Existing Player ID:", existingPlayerId);
+      }
+    }
+    
+  }, [socket]);
+
+  const handleCreateRoom = () => {
+    if (socket) {
+      createRoom(socket, (roomId: string) => {
+        console.log("📦 Room created with ID:", roomId);
+        setRoomCode(roomId); // แสดงรหัสห้องที่สร้าง
+  
+        joinRoom(
+          socket,
+          roomId,
+          name,
+          localStorage.getItem("playerId") || "",
+          (error: string) => {
+            console.error("❌ Error joining room:", error);
+          },
+          (players) => {
+            console.log("👥 Players in room:", players);
+          }
+        )  
+      });
+    }
+  };
+
+  const handleJoinRoom = () => {
+    const playerId = localStorage.getItem("playerId");
+    if (!playerId) {
+      console.error("Player ID not found");
+      return;
+    }
+
+    if (socket) {
+      joinRoom(
+        socket,
+        roomCode,
+        name,
+        playerId,
+        (error: string) => {
+          console.error("❌ Error joining room:", error);
+        },
+        (players) => {
+          console.log("👥 Players in room:", players);
+        }
+      );
+    }
+
+  };
 
   const character = [
     { id: 1, name: "Borhk" , image: "/Apple boy.svg"},
@@ -19,49 +88,6 @@ export default function LoginPage() {
     { id: 5, name: "Solanum" , image: "/Tomato.svg"}
   ]
   const [selected,setSelected] = useState<number | null>(null);
-  
-  const handleJoinRoom = async () => {
-    if (name && roomCode && roomCode.trim() !== '') {
-      try {
-        const response = await joinRoom(roomCode, name);
-        
-        // เชื่อมต่อกับ Socket.IO server และเข้าร่วมห้อง
-        const playerName = name;
-        const isCreateRoom = false;
-        connectWebSocket(roomCode, playerName, isCreateRoom);
-        
-        // นำทางไปยังหน้า lobby
-        router.push(`/lobby?roomCode=${roomCode}&playerName=${playerName}&isCreateRoom=false`);
-      } catch (error) {
-        console.error("Error joining room:", error);
-        alert("ไม่สามารถเข้าร่วมห้องได้ โปรดตรวจสอบรหัสห้องและลองอีกครั้ง");
-      }
-    } else {
-      if (!name) {
-        alert("กรุณาระบุชื่อของคุณ");
-      } else if (!roomCode || roomCode.trim() === '') {
-        alert("กรุณาระบุรหัสห้อง");
-      }
-    }
-  };
-  
-
-  const handleCreateRoom = async () => {
-    if (name) {
-      // เชื่อมต่อ WebSocket ก่อน โดยส่งค่า roomCode เป็นค่าว่างเพราะยังไม่มีห้อง
-      // และกำหนด isCreateRoom เป็น true เพื่อให้ WebSocket ส่ง event createRoom
-      connectWebSocket("", name, true);
-      
-      // เรียกใช้ createRoom เพื่อรับ roomCode จาก Socket.IO
-      const response = await createRoom(name);
-      setRoomCode(response.roomCode);
-      
-      // นำทางไปยังหน้า lobby
-      router.push(`/lobby?roomCode=${response.roomCode}&playerName=${name}&isCreateRoom=true`);
-    } else {
-      alert("กรุณาระบุชื่อของคุณ");
-    }
-  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
@@ -74,10 +100,10 @@ export default function LoginPage() {
             alt="Picture of the author"
           />
         </div>
-
+        {roomCode}
         {/* Character pick */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <h1 className="text-xl font-bold text-black">Select Your Character</h1>
+          <h1 className="text-xl font-bold text-black">{roomCode}</h1>
           <div className="grid grid-cols-3 gap-4 justify-center">
             {character.slice(0, 3).map((char) => (
               <motion.div
@@ -139,12 +165,14 @@ export default function LoginPage() {
             placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" 
             placeholder="Enter Room code" />
 
-          <button onClick={handleJoinRoom} type="submit" 
+          <button type="submit" 
+          onClick={handleJoinRoom}
           className="flex-none rounded-mx px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-stone-800 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
             Join room</button> 
         </div>
 
-        <button onClick={handleCreateRoom} 
+        <button
+        onClick={handleCreateRoom}
         className="w-10/12 p-2 bg-black
          hover:bg-stone-800 
          rounded-3xl">

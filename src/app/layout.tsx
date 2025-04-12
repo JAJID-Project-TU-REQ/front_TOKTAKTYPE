@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Jersey_25 } from "next/font/google";
 import "./globals.css";
+import React from "react";
+import { SocketProvider } from "./utils/socketContext";
 
 const jersey25 = Jersey_25({
   variable: "--font-jersey",
@@ -11,8 +13,8 @@ const jersey25 = Jersey_25({
 export const metadata: Metadata = {
   title: "TOKTAK TYPE",
   description: "Speed type game",
-  icons:{
-    icon:"/Group 16.ico",
+  icons: {
+    icon: "/Group 16.ico",
   }
 };
 
@@ -27,7 +29,9 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${jersey25.variable} antialiased`}
       >
-        {children}
+        <SocketProvider>
+          {children}
+        </SocketProvider>
       </body>
     </html>
   );
