@@ -24,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        suppressHydrationWarning
         className={`${jersey25.variable} antialiased`}
       >
         {children}

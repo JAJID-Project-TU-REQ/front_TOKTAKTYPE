@@ -1,8 +1,15 @@
 "use client";
-import React, { useState, useEffect, useRef, use } from 'react';
-import Image from 'next/image'
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
+import { getWebSocket, updateWpm, sendGameResults } from '../utils/WebSocket';
+import Timer from '../components/Timer';
 
 const MonkeyType = () => {
+    const searchParams = useSearchParams();
+    const roomCode = searchParams.get("roomCode");
+    const playerName = searchParams.get("playerName");
+    
     const [text, setText] = useState('');
     const [userInput, setUserInput] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,6 +34,29 @@ const MonkeyType = () => {
 
     useEffect(() => {
         resetTest();
+        
+        // รับเหตุการณ์เมื่อเกมเริ่ม
+        const handleGameStarted = (event) => {
+            const data = event.detail;
+            console.log('Game started with data:', data);
+            
+            // ตั้งค่าเวลาเริ่มเกมตามที่ได้รับจาก server
+            if (data && data.startTime) {
+                setStartTime(data.startTime);
+                setIsStarted(true);
+                // Focus input เมื่อเกมเริ่ม
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                }
+            }
+        };
+        
+        // เพิ่ม event listener สำหรับเหตุการณ์เริ่มเกม
+        window.addEventListener('gameStarted', handleGameStarted);
+        
+        return () => {
+            window.removeEventListener('gameStarted', handleGameStarted);
+        };
     }, []);
 
     useEffect(() => {
@@ -58,11 +88,9 @@ const MonkeyType = () => {
         const value = e.target.value;
         const key = e.key;
 
-
-        if (!isStarted && value.length > 0) {
-            setIsStarted(true);
-            setStartTime(Date.now());
-        }
+        // ไม่ต้องตั้งค่า startTime เมื่อผู้เล่นเริ่มพิมพ์
+        // เพราะเราจะใช้ startTime ที่ได้รับจาก server แทน
+        // ซึ่งจะทำให้ผู้เล่นทุกคนเริ่มเล่นพร้อมกัน
 
         if (!isFinished) {
             setUserInput(value);
@@ -104,6 +132,11 @@ const MonkeyType = () => {
             }
             const calculatedWpm = Math.round(numCorrectWords / timeInMinutes);
             setWpm(calculatedWpm);
+            
+            // ส่งค่า WPM ไปยัง server ผ่าน Socket.IO
+            if (roomCode) {
+                updateWpm(roomCode, calculatedWpm);
+            }
         } else {
             setWpm(0);
         }
@@ -156,7 +189,7 @@ const MonkeyType = () => {
         >
             
             <div className="flex justify-center gap-72 mb-4 mt-2">
-                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮 NAME : </div>
+                    <div className="text-base sm:text-lg font-semibold  rounded-lg p-2">🎮 NAME : {playerName || 'Player'}</div>
                     <div className="text-base sm:text-lg font-semibold rounded-lg p-2"> 🏆 RANKING : </div>
         
                 </div>
@@ -169,7 +202,31 @@ const MonkeyType = () => {
                  />
             </h1>
             <h1 className="text-lg text-center mt-0 p-2 mb-2">
-             TIME : {Math.floor(((isFinished ? endTime : Date.now()) - (startTime || Date.now())) / 60000)}m {Math.floor((((isFinished ? endTime : Date.now()) - (startTime || Date.now())) % 60000) / 1000)}s
+             <Timer 
+                startTime={startTime} 
+                endTime={endTime} 
+                isFinished={isFinished} 
+                isStarted={isStarted} 
+                className="mx-auto"
+                countdownMode={true}
+                countdownTime={30000} // 30 seconds
+                onTimeUp={() => {
+                    if (!isFinished) {
+                        setIsFinished(true);
+                        setEndTime(Date.now());
+                        // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์เมื่อเวลาหมด
+                        if (roomCode) {
+                            sendGameResults(
+                                roomCode, 
+                                wpm, 
+                                accuracy, 
+                                mistakes, 
+                                30 // เวลาที่ใช้คือ 30 วินาที (เต็มเวลา)
+                            );
+                        }
+                    }
+                }}
+             />
             </h1>
 
 
@@ -208,16 +265,47 @@ const MonkeyType = () => {
                     <p className="text-sm sm:text-base"> WPM: {wpm}</p>
                     <p className="text-sm sm:text-base">  Accuracy: {accuracy}%</p>
                     <p className="text-sm sm:text-base">Mistakes: {mistakes}</p>
-                    <p className="text-sm sm:text-base">Time: {((endTime - startTime) / 1000).toFixed(2)} seconds</p>
+                    <div className="text-sm sm:text-base flex items-center">
+                        <span className="mr-2">Time:</span>
+                        <Timer 
+                            startTime={startTime} 
+                            endTime={endTime} 
+                            isFinished={isFinished} 
+                            isStarted={true} 
+                            className="inline-block"
+                            countdownMode={false} 
+                        />
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (roomCode) {
+                                // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์
+                                sendGameResults(
+                                    roomCode, 
+                                    wpm, 
+                                    accuracy, 
+                                    mistakes, 
+                                    ((endTime - startTime) / 1000)
+                                );
+                                // นำทางไปยังหน้า leaderboard
+                                window.location.href = `/leaderboard?roomCode=${roomCode}&playerName=${playerName}`;
+                            }
+                        }}
+                        className="mt-4 w-full p-2 bg-stone-800 text-white rounded-lg hover:bg-stone-600 transition"
+                    >
+                        View Leaderboard
+                    </button>
                 </div>
             )}
 
-            <button
-                onClick={resetTest}
-                className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
-            >
-                {isFinished ? "Try Again" : "Reset"}
-            </button>
+            {isFinished && (
+                <button
+                    onClick={resetTest}
+                    className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300 "
+                >
+                    Try Again
+                </button>
+            )}
         </div>
     </div>
     );
