@@ -98,13 +98,7 @@ export const updateWpm = (socket: Socket, roomId: string, playerId: string, wpm:
 };
 
 // ฟังก์ชันสำหรับเริ่มเกม
-export const startGame = (
-  socket: Socket,
-  roomId: string,
-  onGameStarted: (status: string) => void,
-  onError: (error: string) => void
-) => {
-  // ส่งคำขอเริ่มเกมไปยังเซิร์ฟเวอร์
+export const startGame = (socket: Socket, roomId: string) => {
   socket.emit("startGame", roomId);
 
   // ฟัง event "gameStarted" เพื่อรับสถานะเกมที่อัปเดต
