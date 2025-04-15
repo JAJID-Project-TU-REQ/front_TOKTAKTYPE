@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect} from "react";
+import React, { useState, useEffect, useRef} from "react";
 import { useRouter } from "next/navigation";
 import Image from 'next/image'
 import { motion } from "framer-motion";
@@ -7,7 +7,8 @@ import { useSocket } from "./utils/socketContext";
 import { 
         onPlayerIdReceived,
         createRoom,
-        joinRoom
+        joinRoom,
+        getRoomIdByPlayerId,
       } from "./utils/socketClient";
 
 export default function LoginPage() {
@@ -15,11 +16,10 @@ export default function LoginPage() {
   const router = useRouter();
   const [name, setName] = useState<string>("");
   const [roomCode, setRoomCode] = useState<string>("");
-
-  
-  // const router = useRouter();
+  const hasEmitted = useRef(false); // flag to track emitting
 
   useEffect(() => {
+    console.log('now in login page')
     if (socket) {
       const existingPlayerId = localStorage.getItem("playerId");
       if (!existingPlayerId) {
@@ -30,8 +30,22 @@ export default function LoginPage() {
       } else {
         console.log("👤 Existing Player ID:", existingPlayerId);
       }
-    }
+      if (existingPlayerId && !hasEmitted.current) {
+        setName((existingPlayerId))
+
+        getRoomIdByPlayerId(socket, existingPlayerId, (roomId) => {
+          if (!roomId) return;
+          router.push(`/lobby`);
+          hasEmitted.current = true;
+        });
+      }
+  }
     
+    return () => {
+      if (socket) {
+        socket.off("playerId");
+      }
+    };
   }, [socket]);
 
   const handleCreateRoom = () => {
@@ -48,11 +62,10 @@ export default function LoginPage() {
           (error: string) => {
             console.error("❌ Error joining room:", error);
           },
-          (players) => {
-            console.log("👥 Players in room:", players);
-          }
-        )  
+        )
+      socket.off("roomCreated");
       });
+      router.push(`/lobby`);
     }
   };
 
@@ -70,14 +83,13 @@ export default function LoginPage() {
         name,
         playerId,
         (error: string) => {
+          router.push('/')
           console.error("❌ Error joining room:", error);
+          return;
         },
-        (players) => {
-          console.log("👥 Players in room:", players);
-        }
       );
+      router.push(`/lobby`);
     }
-
   };
 
   const character = [
@@ -103,7 +115,7 @@ export default function LoginPage() {
         {roomCode}
         {/* Character pick */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <h1 className="text-xl font-bold text-black">{roomCode}</h1>
+          <h1 className="text-xl font-bold text-black">Choose a character</h1>
           <div className="grid grid-cols-3 gap-4 justify-center">
             {character.slice(0, 3).map((char) => (
               <motion.div

@@ -32,7 +32,7 @@ export const joinRoom = (
   playerName: string,
   playerId: string,
   onError: (error: string) => void,
-  onPlayerListUpdate: (players: Player[]) => void
+  // onPlayerListUpdate: (players: Player[]) => void
 ) => {
   socket.emit("joinRoom", { roomId, playerName, playerId });
 
@@ -40,10 +40,12 @@ export const joinRoom = (
     onError(error);
   });
 
-  socket.on("playerList", (players: Player[]) => {
-    onPlayerListUpdate(players);
-  });
+  // socket.on("playerList", (players: Player[]) => {
+  //   onPlayerListUpdate(players);
+  // });
 };
+
+
 
 // ฟังก์ชันสำหรับออกจากห้อง
 export const leaveRoom = (socket: Socket, roomId: string, playerId: string) => {
@@ -56,12 +58,19 @@ export const requestPlayerList = (
   roomId: string,
   callback: (players: Player[]) => void
 ) => {
-  socket.emit("requestPlayerList", roomId);
+  socket.emit("requestPlayerList", roomId , callback);
+  // socket.on("playerList", (players: Player[]) => {
+  //   callback(players);
+  // });
+};
+export const onPlayerListUpdate = (
+  socket: Socket,
+  callback: (players: Player[]) => void
+) => {
   socket.on("playerList", (players: Player[]) => {
     callback(players);
   });
-};
-
+}
 // ฟังก์ชันสำหรับร้องขอข้อมูลห้อง
 export const requestRoomInfo = (
   socket: Socket,
@@ -88,6 +97,8 @@ export const getRoomIdByPlayerId = (
     callback(roomId);
   });
 };
+
+
 
 // ฟังก์ชันสำหรับอัปเดต WPM ของผู้เล่น
 export const updateWpm = (socket: Socket, roomId: string, playerId: string, wpm: number) => {

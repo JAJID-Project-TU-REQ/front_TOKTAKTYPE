@@ -1,40 +1,67 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useSocket } from '../utils/socketContext';
-import { getRoomIdByPlayerId, requestPlayerList, Player } from '../utils/socketClient';
+import { 
+  getRoomIdByPlayerId, 
+  requestPlayerList, 
+  Player, 
+  onPlayerListUpdate,
+  leaveRoom,
+} from '../utils/socketClient';
+import { useRouter } from 'next/navigation';
 
 
 const Lobby: React.FC = () => {
+  const router = useRouter();
   const { socket } = useSocket();
-  const [roomId, setRoomId] = useState<string | null>(null);
+  const [roomCode, setRoomId] = useState<string | null>(null);
   const [playerList, setPlayerList] = useState<Player[]>([]);
+  const hasEmitted = useRef(false); // flag to track emitting
 
   useEffect(() => {
-    console.log('now in lobby page')
-    console.log('socket', socket)
-    console.log('roomId', roomId)
-    console.log('playerList', playerList)
-    if (socket) {
-      const playerId = localStorage.getItem("playerId");
-      if (playerId) {
-        // ดึง roomId จาก playerId
-        getRoomIdByPlayerId(socket, playerId, (roomId) => {
-          if (roomId) {
-            setRoomId(roomId);
-            console.log("📦 Room ID:", roomId);
+    if (!socket) return;
+    onPlayerListUpdate(socket, (players: Player[]) => {
+      setPlayerList(players);
+      console.log("👤 Player List Updated:", players);
+    });
 
-            // ดึงรายชื่อผู้เล่นในห้อง
-            requestPlayerList(socket, roomId, (players) => {
-              setPlayerList(players); // players จะเป็น array ของ Player
-              console.log("👥 Players in room:", players);
-            });
-          }
-        });
-      }
-    }
+
+    
+    const playerId = localStorage.getItem("playerId");
+    if (!(playerId && !hasEmitted.current)) return
+      getRoomIdByPlayerId(socket, playerId, (roomId) => {
+        if (roomId) {
+          setRoomId(roomId);
+          console.log("📦 Room ID:", roomId);
+          
+          requestPlayerList(socket, roomId, (players: Player[]) => {
+          setPlayerList(players);
+          console.log("👤 Player List:", players);
+          });
+        }else{
+          router.push(`/`);
+          console.log("👤 Player not in a room");
+        }
+      });
+    hasEmitted.current = true
+    
+
+    return () => {
+      socket.off("playerList");
+    };
   }, [socket]);
 
+  function leaveRoomButton() {
+    const playerId = localStorage.getItem("playerId");
+    if (!(socket && roomCode && playerId )) return;
+    leaveRoom(socket, roomCode, playerId);
+    getRoomIdByPlayerId(socket, playerId, (roomId) => {
+      if (roomId) return;
+      router.push(`/`);
+      console.log("👤 Player left the room");
+    });
+  }
   return (
     // Background jra
     <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
@@ -56,7 +83,7 @@ const Lobby: React.FC = () => {
             border-stone-500 rounded-2xl 
             text-center text-gray-600 
             justify-center
-            mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomId || "Loading..."}</span></p>
+            mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomCode || "Loading..."}</span></p>
           
           {/* Waiting player */}
           <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
@@ -82,6 +109,12 @@ const Lobby: React.FC = () => {
             className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
           >
             ! Start Game !
+          </button>
+          <button 
+            onClick={leaveRoomButton}
+            className="mt-4 w-full bg-red-800 text-white p-2 rounded-lg hover:bg-red-600"
+          >
+            Leave Room
           </button>
         </div>
       </div>
