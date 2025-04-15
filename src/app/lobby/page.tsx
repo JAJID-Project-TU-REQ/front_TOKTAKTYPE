@@ -2,13 +2,23 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useSocket } from '../utils/socketContext';
-import { getRoomIdByPlayerId, requestPlayerList, Player } from '../utils/socketClient';
+import {
+  getRoomIdByPlayerId,
+  requestPlayerList,
+  Player,
+  requestRoomInfo,
+  startGame
+} from '../utils/socketClient';
+import { useRouter } from "next/navigation";
+
 
 
 const Lobby: React.FC = () => {
   const { socket } = useSocket();
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [hostId, setHostId] = useState<string | null>(null);
   const [playerList, setPlayerList] = useState<Player[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     console.log('now in lobby page')
@@ -25,15 +35,52 @@ const Lobby: React.FC = () => {
             console.log("📦 Room ID:", roomId);
 
             // ดึงรายชื่อผู้เล่นในห้อง
-            requestPlayerList(socket, roomId, (players) => {
-              setPlayerList(players); // players จะเป็น array ของ Player
-              console.log("👥 Players in room:", players);
-            });
+            requestPlayerList(
+              socket,
+              roomId,
+              (players) => {
+                setPlayerList(players); // players จะเป็น array ของ Player
+                console.log("👥 Players in room:", players);
+              });
+
+            requestRoomInfo(
+              socket,
+              roomId,
+              (roomInfo) => {
+                // เมื่อเซิร์ฟเวอร์ส่งข้อมูลห้องกลับมา
+                setHostId(roomInfo.hostId); // เก็บ hostId ใน state
+                console.log("🏠 Room Info:", roomInfo);
+              },
+              (error) => {
+                // จัดการข้อผิดพลาด
+                console.error("❌ Error fetching room info:", error);
+              }
+            );
           }
         });
       }
     }
   }, [socket]);
+
+  const handleStartGame = () => {
+    if (socket && roomId) {
+      startGame(
+        socket,
+        roomId,
+        (status) => {
+          console.log("🎮 Game started with status:", status);
+          if (status === "playing") {
+            // เปลี่ยนหน้าไปยังหน้าที่เกี่ยวข้องกับเกม
+          }
+        },
+        (error) => {
+          console.error("❌ Error starting game:", error);
+          alert(`Error: ${error}`);
+        }
+      );
+      router.push("/type")
+    }
+  }
 
   return (
     // Background jra
@@ -51,20 +98,20 @@ const Lobby: React.FC = () => {
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Game Lobby</h2>
           {/* ROOM BOX */}
-            <p className=" flex
+          <p className=" flex
             bg-white bg-opacity-80 border-2
             border-stone-500 rounded-2xl 
             text-center text-gray-600 
             justify-center
             mb-2 px-4 py-2 ">Room Code: <span className="font-bold text-gray-800">{roomId || "Loading..."}</span></p>
-          
+
           {/* Waiting player */}
           <p className="text-center text-gray-600 mb-4">Waiting for players to join...</p>
-          
+
           {/* Table player */}
           <div className="overflow-x-auto">
             <ul className="w-full border border-gray-200 rounded-lg p-3">
-            {playerList.length > 0 ? (
+              {playerList.length > 0 ? (
                 playerList.map((player) => (
                   <li
                     key={player.id}
@@ -78,11 +125,14 @@ const Lobby: React.FC = () => {
               )}
             </ul>
           </div>
-          <button 
-            className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
-          >
-            ! Start Game !
-          </button>
+          {localStorage.getItem("playerId") === hostId && (
+            <button
+              onClick={handleStartGame}
+              className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
+            >
+              ! Start Game !
+            </button>
+          )}
         </div>
       </div>
     </div>

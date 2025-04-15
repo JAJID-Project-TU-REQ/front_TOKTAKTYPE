@@ -17,8 +17,6 @@ export default function LoginPage() {
   const [roomCode, setRoomCode] = useState<string>("");
 
   
-  // const router = useRouter();
-
   useEffect(() => {
     if (socket) {
       const existingPlayerId = localStorage.getItem("playerId");
@@ -36,22 +34,29 @@ export default function LoginPage() {
 
   const handleCreateRoom = () => {
     if (socket) {
-      createRoom(socket, (roomId: string) => {
+      const playerId = localStorage.getItem("playerId");
+      if (!playerId) {
+        console.error("Player ID not found");
+        return;
+      }
+
+      createRoom(socket, playerId, (roomId: string) => {
         console.log("📦 Room created with ID:", roomId);
         setRoomCode(roomId); // แสดงรหัสห้องที่สร้าง
-  
+      
         joinRoom(
           socket,
           roomId,
           name,
-          localStorage.getItem("playerId") || "",
+          playerId,
           (error: string) => {
-            console.error("❌ Error joining room:", error);
+        console.error("❌ Error joining room:", error);
           },
           (players) => {
-            console.log("👥 Players in room:", players);
+        console.log("👥 Players in room:", players);
           }
-        )  
+        );
+        router.push('/lobby');
       });
     }
   };
@@ -76,6 +81,7 @@ export default function LoginPage() {
           console.log("👥 Players in room:", players);
         }
       );
+      router.push('/lobby')
     }
 
   };
@@ -100,10 +106,9 @@ export default function LoginPage() {
             alt="Picture of the author"
           />
         </div>
-        {roomCode}
         {/* Character pick */}
         <div className="flex flex-col items-center gap-4 w-full">
-          <h1 className="text-xl font-bold text-black">{roomCode}</h1>
+          <h1 className="text-xl font-bold text-black">Select your character</h1>
           <div className="grid grid-cols-3 gap-4 justify-center">
             {character.slice(0, 3).map((char) => (
               <motion.div
