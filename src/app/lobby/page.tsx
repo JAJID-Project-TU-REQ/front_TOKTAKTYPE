@@ -7,7 +7,8 @@ import {
   requestPlayerList,
   Player,
   requestRoomInfo,
-  startGame
+  startGame,
+  leaveRoom
 } from '../utils/socketClient';
 import { useRouter } from "next/navigation";
 
@@ -28,7 +29,9 @@ const Lobby: React.FC = () => {
     if (socket) {
       const playerId = localStorage.getItem("playerId");
       if (playerId) {
-        // ดึง roomId จาก playerId
+        if (!(playerId in playerList)){
+          router.push("/"); 
+        }
         getRoomIdByPlayerId(socket, playerId, (roomId) => {
           if (roomId) {
             setRoomId(roomId);
@@ -47,8 +50,7 @@ const Lobby: React.FC = () => {
               socket,
               roomId,
               (roomInfo) => {
-                // เมื่อเซิร์ฟเวอร์ส่งข้อมูลห้องกลับมา
-                setHostId(roomInfo.hostId); // เก็บ hostId ใน state
+                setHostId(roomInfo.hostId);
                 console.log("🏠 Room Info:", roomInfo);
               },
               (error) => {
@@ -60,8 +62,10 @@ const Lobby: React.FC = () => {
         });
       }
     }
+    
   }, [socket]);
 
+  
   const handleStartGame = () => {
     if (socket && roomId) {
       startGame(
@@ -70,7 +74,7 @@ const Lobby: React.FC = () => {
         (status) => {
           console.log("🎮 Game started with status:", status);
           if (status === "playing") {
-            // เปลี่ยนหน้าไปยังหน้าที่เกี่ยวข้องกับเกม
+            router.push("/type")
           }
         },
         (error) => {
@@ -78,10 +82,17 @@ const Lobby: React.FC = () => {
           alert(`Error: ${error}`);
         }
       );
-      router.push("/type")
     }
   }
 
+  const handleLeaveRoom = () => {
+    const playerId = localStorage.getItem("playerId");
+    if (playerId && socket && roomId) {
+      leaveRoom(socket, roomId, playerId,)
+        router.push("/"); // เปลี่ยนเส้นทางไปยังหน้าแรก
+      }
+    }
+  
   return (
     // Background jra
     <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
@@ -133,6 +144,12 @@ const Lobby: React.FC = () => {
               ! Start Game !
             </button>
           )}
+          <button
+              onClick={handleLeaveRoom}
+              className="mt-4 w-full bg-red-800 text-white p-2 rounded-lg hover:bg-red-600"
+            >
+              Leave Room
+            </button>
         </div>
       </div>
     </div>

@@ -7,7 +7,9 @@ import { useSocket } from "./utils/socketContext";
 import { 
         onPlayerIdReceived,
         createRoom,
-        joinRoom
+        joinRoom,
+        getRoomIdByPlayerId,
+        requestRoomInfo
       } from "./utils/socketClient";
 
 export default function LoginPage() {
@@ -27,9 +29,15 @@ export default function LoginPage() {
         });
       } else {
         console.log("👤 Existing Player ID:", existingPlayerId);
+        getRoomIdByPlayerId(socket, existingPlayerId, (roomId: string | null) => {
+          if (roomId) {
+            router.push('/lobby');
+          }
+        });
       }
     }
-    
+  return () => {
+  }
   }, [socket]);
 
   const handleCreateRoom = () => {
@@ -42,6 +50,7 @@ export default function LoginPage() {
 
       createRoom(socket, playerId, (roomId: string) => {
         console.log("📦 Room created with ID:", roomId);
+        console.log("👤 Player ID:", playerId);
         setRoomCode(roomId); // แสดงรหัสห้องที่สร้าง
       
         joinRoom(
@@ -53,10 +62,12 @@ export default function LoginPage() {
         console.error("❌ Error joining room:", error);
           },
           (players) => {
-        console.log("👥 Players in room:", players);
+            console.log("👥 Players in room:", players);
+            if (players.length > 0) {
+              router.push('/lobby'); // เปลี่ยนเส้นทางไปยังหน้า lobby
+            }
           }
         );
-        router.push('/lobby');
       });
     }
   };
@@ -81,7 +92,7 @@ export default function LoginPage() {
           console.log("👥 Players in room:", players);
         }
       );
-      router.push('/lobby')
+      
     }
 
   };
@@ -160,13 +171,13 @@ export default function LoginPage() {
         placeholder="Enter your name" 
         value={name} onChange={(e) => setName(e.target.value)} 
         className="w-full p-3 rounded-xl text-black border
-         border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          border-stone-950 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
       
         {/* Room number */}
-         <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
+          <div className=" flex max-w-md gap-x-4 mt-2 mb-2 bg-black p-4 rounded-3xl">
           <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} type="text" 
           required className="min-w-0 flex-auto rounded-3xl
-           bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10
+            bg-white px-3.5 py-2 text-base text-black outline-1 -outline-offset-1 outline-white/10
             placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6" 
             placeholder="Enter Room code" />
 
@@ -179,8 +190,8 @@ export default function LoginPage() {
         <button
         onClick={handleCreateRoom}
         className="w-10/12 p-2 bg-black
-         hover:bg-stone-800 
-         rounded-3xl">
+          hover:bg-stone-800 
+          rounded-3xl">
           Create Room
         </button>
 

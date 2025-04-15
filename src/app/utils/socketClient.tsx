@@ -18,11 +18,8 @@ export interface RoomInfo {
 }
 
 // ฟังก์ชันสำหรับสร้างห้องใหม่
-export const createRoom = (
-  socket: Socket, 
-  playerId:string, 
-  callback: (roomId: string) => void) => {
-  socket.emit("createRoom", playerId);
+export const createRoom = (socket: Socket, playerId:string, callback: (roomId: string) => void) => {
+  socket.emit("createRoom", playerId );
   socket.on("roomCreated", (roomId: string) => {
     callback(roomId);
   });
@@ -98,7 +95,12 @@ export const updateWpm = (socket: Socket, roomId: string, playerId: string, wpm:
 };
 
 // ฟังก์ชันสำหรับเริ่มเกม
-export const startGame = (socket: Socket, roomId: string) => {
+export const startGame = (
+  socket: Socket, 
+  roomId: string,
+  onGameStarted: (status: string) => void,
+  onError: (error: string) => void
+) => {
   socket.emit("startGame", roomId);
 
   // ฟัง event "gameStarted" เพื่อรับสถานะเกมที่อัปเดต

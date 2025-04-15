@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SERVER_URL = "http://localhost:3001";
+// const SERVER_URL = "http://localhost:3001";
 const FORRWARD_URL = "https://jdl6177s-3001.asse.devtunnels.ms/";
 
 interface SocketContextProps {
