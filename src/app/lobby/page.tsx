@@ -8,6 +8,7 @@ import {
   Player, 
   onPlayerListUpdate,
   leaveRoom,
+  requestRoomInfo
 } from '../utils/socketClient';
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +18,7 @@ const Lobby: React.FC = () => {
   const { socket } = useSocket();
   const [roomCode, setRoomId] = useState<string | null>(null);
   const [playerList, setPlayerList] = useState<Player[]>([]);
+  const [hostId, setHostId] = useState<string | null>(null);
   const hasEmitted = useRef(false); // flag to track emitting
 
   useEffect(() => {
@@ -39,6 +41,14 @@ const Lobby: React.FC = () => {
           setPlayerList(players);
           console.log("👤 Player List:", players);
           });
+
+          requestRoomInfo(socket, roomId, (roomInfo) => {
+            setHostId(roomInfo.hostId);
+            console.log("📦 Room Info:", roomInfo);
+          }, (error) => {
+            console.error("Error fetching room info:", error);
+          });
+          
         }else{
           router.push(`/`);
           console.log("👤 Player not in a room");
@@ -105,11 +115,13 @@ const Lobby: React.FC = () => {
               )}
             </ul>
           </div>
-          <button 
-            className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
-          >
-            ! Start Game !
-          </button>
+            {localStorage.getItem("playerId") === hostId && (
+            <button 
+              className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
+            >
+              ! Start Game !
+            </button>
+            )}
           <button 
             onClick={leaveRoomButton}
             className="mt-4 w-full bg-red-800 text-white p-2 rounded-lg hover:bg-red-600"

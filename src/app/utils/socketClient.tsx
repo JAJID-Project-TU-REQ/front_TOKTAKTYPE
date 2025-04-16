@@ -18,10 +18,10 @@ export interface RoomInfo {
 }
 
 // ฟังก์ชันสำหรับสร้างห้องใหม่
-export const createRoom = (socket: Socket, callback: (roomId: string) => void) => {
-  socket.emit("createRoom");
-  socket.on("roomCreated", (roomId: string) => {
-    callback(roomId);
+export const createRoom = (socket: Socket, playerId: string, callback: (roomId: string) => void) => {
+  socket.emit("createRoom", playerId);
+  socket.on("roomCreated", (createdRoomId: string) => {
+    callback(createdRoomId);
   });
 };
 
