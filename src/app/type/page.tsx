@@ -17,7 +17,7 @@ interface ResultsData {
 }
 
 interface CountdownTimerProps {
-    timeLeft: number;
+    timeLeft: number;   
     isStarted: boolean;
     isFinished: boolean;
     onTimeExpired?: () => void;
