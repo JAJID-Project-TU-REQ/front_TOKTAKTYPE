@@ -565,13 +565,7 @@ const Type: React.FC = () => {
                     <div
                         ref={textDisplayRef}
                         className="p-4 sm:p-6 rounded-lg shadow mb-4 min-h-40 h-auto max-h-64 overflow-y-auto flex items-start cursor-text"
-                        style={{
-                            width: "100%",
-                            overflowX: "auto",
-                            overflowY: "auto",
-                            wordWrap: "break-word",
-                            whiteSpace: "pre-wrap"
-                        }}
+                        style={{ wordWrap: "break-word", whiteSpace: "pre-wrap" }}
                     >
                         {!isPreGameCountdownComplete ? (
                             <div className="w-full text-center text-gray-400">
