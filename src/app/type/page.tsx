@@ -1,13 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef, KeyboardEvent, ChangeEvent } from 'react';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { generateWords } from './wordGenerator';
 import { useSocket } from '../utils/socketContext';
-import { useRouter } from 'next/navigation';
 import { getStartTimestamp, getRoomIdByPlayerId } from '../utils/socketClient';
 
-// Type definitions
+// Types
 interface ResultsData {
     wpm: number;
     accuracy: number;
@@ -21,6 +20,11 @@ interface CountdownTimerProps {
     isStarted: boolean;
     isFinished: boolean;
     onTimeExpired?: () => void;
+}
+
+interface PreGameCountdownProps {
+    startTimestamp: number | null;
+    onCountdownComplete: () => void;
 }
 
 // CountdownTimer Component
@@ -51,13 +55,10 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
                 if (deltaTime >= 1000) {
                     lastUpdateTimeRef.current = now - (deltaTime % 1000);
-
                     setTimeLeft((prevTime) => {
                         const newTime = prevTime - 1;
                         if (newTime <= 0) {
-                            if (onTimeExpired) {
-                                onTimeExpired();
-                            }
+                            if (onTimeExpired) onTimeExpired();
                             return 0;
                         }
                         return newTime;
@@ -71,23 +72,22 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         return () => {
             if (timerRef.current) {
                 cancelAnimationFrame(timerRef.current);
-                timerRef.current = null;
             }
         };
     }, [isStarted, isFinished, onTimeExpired, timeLeft]);
 
     return (
-        <div style={{ textAlign: 'center', fontSize: '2rem' }}>
+        <div className="text-center text-2xl">
             <p>นับถอยหลัง: {timeLeft} วินาที</p>
         </div>
     );
 };
 
 // Pre-Game Countdown Component
-const PreGameCountdown: React.FC<{
-    startTimestamp: number | null;
-    onCountdownComplete: () => void;
-}> = ({ startTimestamp, onCountdownComplete }) => {
+const PreGameCountdown: React.FC<PreGameCountdownProps> = ({ 
+    startTimestamp, 
+    onCountdownComplete 
+}) => {
     const [countdown, setCountdown] = useState<number>(5);
     const timerRef = useRef<number | null>(null);
 
@@ -103,7 +103,6 @@ const PreGameCountdown: React.FC<{
                 onCountdownComplete();
                 if (timerRef.current) {
                     cancelAnimationFrame(timerRef.current);
-                    timerRef.current = null;
                 }
                 return;
             }
@@ -117,7 +116,6 @@ const PreGameCountdown: React.FC<{
         return () => {
             if (timerRef.current) {
                 cancelAnimationFrame(timerRef.current);
-                timerRef.current = null;
             }
         };
     }, [startTimestamp, onCountdownComplete]);
@@ -132,26 +130,21 @@ const PreGameCountdown: React.FC<{
 
 // Main Type Component
 const Type: React.FC = () => {
-    // Router and params
     const searchParams = useSearchParams();
     const roomCode = searchParams.get("roomCode");
     const playerName = searchParams.get("playerName");
     const { socket } = useSocket();
     const router = useRouter();
-
-    // Refs
     const inputRef = useRef<HTMLInputElement>(null);
     const textDisplayRef = useRef<HTMLDivElement>(null);
 
-    // Game state
+    // State
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isStarted, setIsStarted] = useState<boolean>(false);
     const [isPreGameCountdownComplete, setIsPreGameCountdownComplete] = useState<boolean>(false);
     const [isFinished, setIsFinished] = useState<boolean>(false);
     const [seed, setSeed] = useState<number>(Math.floor(Math.random() * 10000));
     const [timeLeft, setTimeLeft] = useState<number>(60);
-    
-    // Text and input state
     const [text, setText] = useState<string>('');
     const [formattedText, setFormattedText] = useState<string[][]>([]);
     const [userInput, setUserInput] = useState<string>('');
@@ -159,8 +152,6 @@ const Type: React.FC = () => {
     const [currentLineIndex, setCurrentLineIndex] = useState<number>(0);
     const [visibleLines, setVisibleLines] = useState<number[]>([0, 1, 2, 3, 4]);
     const [longestLineWidth, setLongestLineWidth] = useState<number>(0);
-    
-    // Performance metrics
     const [startTime, setStartTime] = useState<number | null>(null);
     const [endTime, setEndTime] = useState<number | null>(null);
     const [wpm, setWpm] = useState<number>(0);
@@ -172,28 +163,12 @@ const Type: React.FC = () => {
     const formatTextIntoLines = (text: string): string[][] => {
         const words = text.split(' ');
         const lines: string[][] = [];
-
+        
         for (let i = 0; i < words.length; i += 8) {
-            const line = words.slice(i, i + 8);
-            lines.push(line);
+            lines.push(words.slice(i, i + 8));
         }
-
+        
         return lines;
-    };
-
-    // Find the longest line for layout purposes
-    const calculateLongestLine = (lines: string[][]): void => {
-        if (lines.length === 0) return;
-
-        let maxLength = 0;
-        for (const line of lines) {
-            const lineLength = line.join(' ').length;
-            if (lineLength > maxLength) {
-                maxLength = lineLength;
-            }
-        }
-
-        setLongestLineWidth(maxLength);
     };
 
     // Load words for the typing test
@@ -204,33 +179,39 @@ const Type: React.FC = () => {
             setText(generatedText);
             const formatted = formatTextIntoLines(generatedText);
             setFormattedText(formatted);
-            calculateLongestLine(formatted);
+            
+            // Find the longest line for layout
+            let maxLength = 0;
+            formatted.forEach(line => {
+                const lineLength = line.join(' ').length;
+                if (lineLength > maxLength) maxLength = lineLength;
+            });
+            setLongestLineWidth(maxLength);
+            
             setIsLoading(false);
         }
         loadWords();
     }, [seed]);
 
-    // Handle pre-game countdown completion
-    const handlePreGameCountdownComplete = () => {
-        setIsPreGameCountdownComplete(true);
-        setIsStarted(true);
-        setStartTime(Date.now());
-        
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    };
-
-    // Auto-focus input when loaded and countdown is complete
+    // Socket connection and room info
     useEffect(() => {
-        if (!isLoading && isPreGameCountdownComplete && !isStarted) {
-            if (inputRef.current) {
-                inputRef.current.focus();
+        if (!socket) return;
+
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) return;
+        
+        getRoomIdByPlayerId(socket, playerId, (roomId) => {
+            if (roomId) {
+                getStartTimestamp(socket, roomId, (timestamp) => {
+                    if (timestamp) {
+                        setStartTimestamp(Math.floor(timestamp / 1000));
+                    }
+                });
+            } else {
+                router.push(`/`);
             }
-            setIsStarted(true);
-            setStartTime(Date.now());
-        }
-    }, [isLoading, isPreGameCountdownComplete, isStarted]);
+        });
+    }, [socket, router]);
 
     // Game started event listener
     useEffect(() => {
@@ -239,9 +220,7 @@ const Type: React.FC = () => {
             if (data && data.startTime) {
                 setStartTime(data.startTime);
                 setIsStarted(true);
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                }
+                if (inputRef.current) inputRef.current.focus();
             }
         };
 
@@ -250,6 +229,15 @@ const Type: React.FC = () => {
             window.removeEventListener('gameStarted', handleGameStarted as EventListener);
         };
     }, []);
+
+    // Auto-focus input when loaded and countdown complete
+    useEffect(() => {
+        if (!isLoading && isPreGameCountdownComplete && !isStarted) {
+            if (inputRef.current) inputRef.current.focus();
+            setIsStarted(true);
+            setStartTime(Date.now());
+        }
+    }, [isLoading, isPreGameCountdownComplete, isStarted]);
 
     // Track current line for auto-scrolling
     useEffect(() => {
@@ -283,46 +271,25 @@ const Type: React.FC = () => {
         }
     }, [currentIndex, formattedText, currentLineIndex]);
 
-    // Socket connection and room info
-    useEffect(() => {
-        if (!socket) return;
+    // Handle game functions
+    const handlePreGameCountdownComplete = () => {
+        setIsPreGameCountdownComplete(true);
+        setIsStarted(true);
+        setStartTime(Date.now());
+        if (inputRef.current) inputRef.current.focus();
+    };
 
-        const playerId = localStorage.getItem("playerId");
-        if (!playerId) return;
-        
-        getRoomIdByPlayerId(socket, playerId, (roomId) => {
-            if (roomId) {
-                getStartTimestamp(socket, roomId, (timestamp) => {
-                    if (timestamp) {
-                        setStartTimestamp(Math.floor(timestamp / 1000));
-                    }
-                });
-            } else {
-                router.push(`/`);
-            }
-        });
-    }, [socket, router]);
-
-    // Game functions
     const handleTimeExpired = (): void => {
         setIsFinished(true);
         setEndTime(Date.now());
 
         if (roomCode) {
-            sendGameResults(
-                roomCode,
-                wpm,
-                accuracy,
-                mistakes,
-                60 // total time in seconds
-            );
+            sendGameResults(roomCode, wpm, accuracy, mistakes, 60);
         }
     };
 
     const resetTest = (): void => {
-        const nextSeed = Math.floor(Math.random() * 10000);
-        setSeed(nextSeed);
-
+        setSeed(Math.floor(Math.random() * 10000));
         setUserInput('');
         setCurrentIndex(0);
         setCurrentLineIndex(0);
@@ -344,6 +311,7 @@ const Type: React.FC = () => {
         if (!isFinished && isPreGameCountdownComplete) {
             setUserInput(value);
 
+            // Calculate mistakes and accuracy
             let mistakeCount = 0;
             for (let i = 0; i < value.length; i++) {
                 if (i < text.length && value[i] !== text[i]) {
@@ -357,8 +325,10 @@ const Type: React.FC = () => {
                 : 100;
             setAccuracy(Math.round(calculatedAccuracy));
 
+            // Calculate WPM
             calculateWpm();
 
+            // Check if test is complete
             if (value.length === text.length) {
                 setEndTime(Date.now());
                 setIsFinished(true);
@@ -398,26 +368,24 @@ const Type: React.FC = () => {
         timeElapsed: number
     ): void => {
         // TODO: Connect to Socket.IO to send results
-        console.log('Sending game results to server:', {
-            roomCode, wpm, accuracy, mistakes, timeElapsed
-        });
+        console.log('Sending game results:', { roomCode, wpm, accuracy, mistakes, timeElapsed });
     };
 
     const updateWpm = (roomCode: string, wpm: number): void => {
         // TODO: Connect to Socket.IO to update WPM
-        console.log('Updating WPM on server:', { roomCode, wpm });
+        console.log('Updating WPM:', { roomCode, wpm });
     };
 
     // Calculate character offset for text highlighting
     const calculateCharOffset = (lineIndex: number): number => {
         let offset = 0;
         for (let i = 0; i < lineIndex; i++) {
-            offset += formattedText[i].join(' ').length + 1; // +1 for space between lines
+            offset += formattedText[i].join(' ').length + 1;
         }
         return offset;
     };
 
-    // Render the text display with correct/incorrect highlighting
+    // Render the text display with highlighting
     const renderText = (): React.ReactNode => {
         if (isLoading) {
             return <div className="text-gray-500">Loading words...</div>;
@@ -428,9 +396,7 @@ const Type: React.FC = () => {
                 <div className="flex flex-col">
                     {formattedText.map((line, lineIndex) => {
                         // Only render visible lines
-                        if (!visibleLines.includes(lineIndex)) {
-                            return null;
-                        }
+                        if (!visibleLines.includes(lineIndex)) return null;
 
                         const lineText = line.join(' ');
                         const charOffset = calculateCharOffset(lineIndex);
@@ -474,43 +440,31 @@ const Type: React.FC = () => {
         );
     };
 
-    // Get final results data
-    const getResults = (): ResultsData | null => {
-        if (!startTime || !endTime) return null;
-
-        return {
-            wpm,
-            accuracy,
-            mistakes,
-            timeElapsed: (endTime - startTime) / 1000,
-            seed
-        };
-    };
-
     return (
         <div className="flex items-center justify-center min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
             <div 
-                className="w-full max-w-4xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
+                className="w-full max-w-5xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
                 onClick={focusInput}
             >
-                {/* Header */}
-                <div className="flex justify-center gap-4 sm:gap-72 mb-4 mt-2 flex-wrap">
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
-                        🎮 NAME : {playerName || 'Player'}
-                    </div>
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
-                        🏆 RANKING : 
+                {/* Ranking Box */}
+                <div className="bg-gray-100 rounded-lg p-4 mb-4 text-black shadow">
+                    <h2 className="text-lg font-bold mb-3 text-center">Player Rankings</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                        {[1, 2, 3, 4, 5].map(rank => (
+                            <div key={rank} className="bg-white rounded-lg p-3 shadow">
+                                <div className="text-base font-semibold">
+                                    <span className="text-xl mr-2">{rank === 1 ? '1️⃣' : rank === 2 ? '2️⃣' : rank === 3 ? '3️⃣' : rank === 4 ? '4️⃣' : '5️⃣'}</span> 
+                                    {playerName || `Player${rank}`}
+                                </div>
+                                <div className="text-sm text-gray-600">Score: {rank}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Logo */}
-                <h1 className="text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
-                    <Image
-                        src="/logo.png"
-                        width={200}
-                        height={100}
-                        alt="Logo"
-                    />
+                <h1 className="text-xl sm:text-2xl font-bold text-center mb-2 flex justify-center">
+                    <Image src="/logo.png" width={200} height={100} alt="Logo" />
                 </h1>
 
                 {/* Pre-game countdown or game timer */}
@@ -534,20 +488,11 @@ const Type: React.FC = () => {
                 </div>
 
                 {/* Text display area */}
-                <div 
-                    className="mb-4 sm:mb-8"
-                    onClick={focusInput}
-                >
+                <div className="mb-4 sm:mb-8" onClick={focusInput}>
                     <div
                         ref={textDisplayRef}
-                        className="p-4 sm:p-6 rounded-lg shadow mb-4 min-h-40 h-auto max-h-64 overflow-y-auto flex items-start cursor-text"
-                        style={{
-                            width: "100%",
-                            overflowX: "auto",
-                            overflowY: "auto",
-                            wordWrap: "break-word",
-                            whiteSpace: "pre-wrap"
-                        }}
+                        className="p-4 sm:p-6 rounded-lg shadow mb-4 min-h-40 h-auto max-h-64 overflow-auto flex items-start cursor-text"
+                        style={{ wordWrap: "break-word", whiteSpace: "pre-wrap" }}
                     >
                         {!isPreGameCountdownComplete ? (
                             <div className="w-full text-center text-gray-400">
@@ -580,6 +525,7 @@ const Type: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Results */}
                 {isFinished && (
                     <div className="mb-4 p-2 sm:p-4 rounded-lg bg-gray-100 text-black">
                         <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Results</h2>
