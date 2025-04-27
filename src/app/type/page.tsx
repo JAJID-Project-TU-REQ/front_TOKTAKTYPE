@@ -5,10 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import { generateWords } from './wordGenerator';
 import { useSocket } from '../utils/socketContext';
 import { useRouter } from 'next/navigation';
-import {getStartTimestamp, 
-        getRoomIdByPlayerId,
-        updatePlayerWpm,
-        getPlayersWpm } from '../utils/socketClient';
+import {
+    getStartTimestamp,
+    getRoomIdByPlayerId,
+    updatePlayerWpm,
+    getPlayersWpm,
+    leaveRoom
+} from '../utils/socketClient';
 import { get } from 'http';
 
 // Type definitions
@@ -21,7 +24,7 @@ interface ResultsData {
 }
 
 interface CountdownTimerProps {
-    timeLeft: number;   
+    timeLeft: number;
     isStarted: boolean;
     isFinished: boolean;
     onTimeExpired?: () => void;
@@ -36,40 +39,46 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 }) => {
     const [timeLeft, setTimeLeft] = useState<number>(initialTime);
     const timerRef = useRef<number | null>(null);
-    const lastUpdateTimeRef = useRef<number>(Date.now());
+    const startTimeRef = useRef<number | null>(null);
 
     useEffect(() => {
-        setTimeLeft(initialTime);
-    }, [initialTime]);
 
-    useEffect(() => {
+        if (!isFinished) {
+            setTimeLeft(initialTime);
+        } else {
+            setTimeLeft(0);
+        }        if (isStarted && !isFinished && !startTimeRef.current) {
+            startTimeRef.current = Math.floor(Date.now() / 1000);
+        }
+
         if (timerRef.current) {
             cancelAnimationFrame(timerRef.current);
             timerRef.current = null;
         }
 
-        if (isStarted && !isFinished && timeLeft > 0) {
-            const updateTimer = () => {
-                const now = Date.now();
-                const deltaTime = now - lastUpdateTimeRef.current;
+        if (isStarted && !isFinished && startTimeRef.current) {
+            const updateCountdown = () => {
+                const now = Math.floor(Date.now() / 1000);
+                // Calculate time left based on startTime + total duration - current time
+                const timeRemaining = startTimeRef.current + initialTime - now;
 
-                if (deltaTime >= 1000) {
-                    lastUpdateTimeRef.current = now - (deltaTime % 1000);
-
-                    setTimeLeft((prevTime) => {
-                        const newTime = prevTime - 1;
-                        if (newTime <= 0) {
-                            if (onTimeExpired) {
-                                onTimeExpired();
-                            }
-                            return 0;
-                        }
-                        return newTime;
-                    });
+                if (timeRemaining <= 0) {
+                    setTimeLeft(0);
+                    if (onTimeExpired) {
+                        onTimeExpired();
+                    }
+                    if (timerRef.current) {
+                        cancelAnimationFrame(timerRef.current);
+                        timerRef.current = null;
+                    }
+                    return;
                 }
-                timerRef.current = requestAnimationFrame(updateTimer);
+
+                setTimeLeft(timeRemaining);
+                timerRef.current = requestAnimationFrame(updateCountdown);
             };
-            timerRef.current = requestAnimationFrame(updateTimer);
+
+            timerRef.current = requestAnimationFrame(updateCountdown);
         }
 
         return () => {
@@ -78,11 +87,12 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
                 timerRef.current = null;
             }
         };
-    }, [isStarted, isFinished, onTimeExpired, timeLeft]);
+    }, [isStarted, isFinished, onTimeExpired, initialTime]);
 
     return (
-        <div style={{ textAlign: 'center', fontSize: '2rem' }}>
-            <p>นับถอยหลัง: {timeLeft} วินาที</p>
+        <div className="flex flex-col items-center justify-center h-40">
+            <h2 className="text-2xl font-bold mb-4">เวลาที่เหลือ</h2>
+            <div className="text-5xl font-bold">{timeLeft}</div>
         </div>
     );
 };
@@ -154,8 +164,8 @@ const Type: React.FC = () => {
     const [isPreGameCountdownComplete, setIsPreGameCountdownComplete] = useState<boolean>(false);
     const [isFinished, setIsFinished] = useState<boolean>(false);
     const [seed, setSeed] = useState<number>(Math.floor(Math.random() * 10000));
-    const [timeLeft, setTimeLeft] = useState<number>(60);
-    
+    const [timeLeft, setTimeLeft] = useState<number>(30);
+
     // Text and input state
     const [text, setText] = useState<string>('');
     const [formattedText, setFormattedText] = useState<string[][]>([]);
@@ -164,7 +174,7 @@ const Type: React.FC = () => {
     const [currentLineIndex, setCurrentLineIndex] = useState<number>(0);
     const [visibleLines, setVisibleLines] = useState<number[]>([0, 1, 2, 3, 4]);
     const [longestLineWidth, setLongestLineWidth] = useState<number>(0);
-    
+
     // Performance metrics
     const [startTime, setStartTime] = useState<number | null>(null);
     const [endTime, setEndTime] = useState<number | null>(null);
@@ -205,22 +215,29 @@ const Type: React.FC = () => {
     useEffect(() => {
         async function loadWords() {
             setIsLoading(true);
-            const generatedText = await generateWords(seed, 300);
-            setText(generatedText);
-            const formatted = formatTextIntoLines(generatedText);
-            setFormattedText(formatted);
-            calculateLongestLine(formatted);
+            if (startTimestamp) {
+                const seedValue = startTimestamp;
+                setSeed(seedValue);
+                const generatedText = await generateWords(seedValue, 300);
+                setText(generatedText);
+                const formatted = formatTextIntoLines(generatedText);
+                setFormattedText(formatted);
+                calculateLongestLine(formatted);
+            }
             setIsLoading(false);
         }
-        loadWords();
-    }, [seed]);
+
+        if (startTimestamp !== null) {
+            loadWords();
+        }
+    }, [startTimestamp]);
 
     // Handle pre-game countdown completion
     const handlePreGameCountdownComplete = () => {
         setIsPreGameCountdownComplete(true);
         setIsStarted(true);
         setStartTime(Date.now());
-        
+
         if (inputRef.current) {
             inputRef.current.focus();
         }
@@ -295,7 +312,7 @@ const Type: React.FC = () => {
         const playerId = localStorage.getItem("playerId");
         if (!playerId) return;
         setPlayerName(playerId);
-        
+
         getRoomIdByPlayerId(socket, playerId, (roomId) => {
             if (roomId) {
                 setRoomCode(roomId);
@@ -308,6 +325,7 @@ const Type: React.FC = () => {
                 router.push(`/`);
             }
         });
+
     }, [socket, router]);
 
     //รับและอัปเดต WPM ของผู้เล่น
@@ -327,6 +345,17 @@ const Type: React.FC = () => {
         return () => clearInterval(interval);
     }, [playerName, roomCode, socket, wpm]);
 
+    function leaveRoomButton() {
+        const playerId = localStorage.getItem("playerId");
+        if (!(socket && roomCode && playerId)) return;
+        leaveRoom(socket, roomCode, playerId);
+        getRoomIdByPlayerId(socket, playerId, (roomId) => {
+            if (roomId) return;
+            router.push(`/`);
+            console.log("👤 Player left the room");
+        });
+    }
+
     // Game functions
     const handleTimeExpired = (): void => {
         setIsFinished(true);
@@ -344,9 +373,11 @@ const Type: React.FC = () => {
     };
 
     const resetTest = (): void => {
-        const nextSeed = Math.floor(Math.random() * 10000);
-        setSeed(nextSeed);
+        // Use current timestamp as new seed
+        const newTimestamp = Math.floor(Date.now() / 1000);
+        setStartTimestamp(newTimestamp);
 
+        // Reset other states
         setUserInput('');
         setCurrentIndex(0);
         setCurrentLineIndex(0);
@@ -359,7 +390,7 @@ const Type: React.FC = () => {
         setIsFinished(false);
         setIsStarted(false);
         setIsPreGameCountdownComplete(false);
-        setTimeLeft(60);
+        setTimeLeft(0);
     };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -481,9 +512,9 @@ const Type: React.FC = () => {
                                     }
 
                                     return (
-                                        <span 
-                                            key={charIndex} 
-                                            className={className} 
+                                        <span
+                                            key={charIndex}
+                                            className={className}
                                             style={{ width: char === " " ? "0.5em" : "auto" }}
                                         >
                                             {content}
@@ -507,39 +538,43 @@ const Type: React.FC = () => {
             accuracy,
             mistakes,
             timeElapsed: (endTime - startTime) / 1000,
-            seed
+            seed: startTimestamp || 0
         };
     };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-[url('/try.svg')] bg-cover bg-center">
-            <div 
+            <div
                 className="w-full max-w-4xl mx-auto p-2 sm:p-4 rounded-lg shadow-lg bg-white"
                 onClick={focusInput}
             >
-                {/* Header */}
-                <div className="flex justify-center gap-4 sm:gap-72 mb-4 mt-2 flex-wrap">
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
-                        🎮 NAME : {playerName || 'Player'}
-                    </div>
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
-                        🏆 RANKING : 
+                <div className="bg-gray-100 rounded-lg p-4 mb-4 text-black shadow">
+                    <h2 className="text-lg font-bold mb-3 text-center">Player Rankings</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                        {playersList
+                            .sort((a, b) => b.wpm - a.wpm) // Sort players by WPM in descending order
+                            .map((player, index) => (
+                                <div key={index} className="bg-white rounded-lg p-3 shadow">
+                                    <div className="text-base font-semibold">
+                                        <span className="text-xl mr-2">
+                                            {index + 1 === 1 ? '1️⃣' : index + 1 === 2 ? '2️⃣' : index + 1 === 3 ? '3️⃣' : index + 1 === 4 ? '4️⃣' : `${index + 1}️⃣`}
+                                        </span>
+                                        {player.name}
+                                    </div>
+                                    <div className="text-sm text-gray-600">WPM: {player.wpm}</div>
+                                </div>
+                            ))}
                     </div>
                 </div>
 
                 {/* Logo */}
-                <h1 className="text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
-                    <Image
-                        src="/logo.png"
-                        width={200}
-                        height={100}
-                        alt="Logo"
-                    />
+                <h1 className="text-xl sm:text-2xl font-bold text-center mb-2 flex justify-center">
+                    <Image src="/logo.png" width={200} height={100} alt="Logo" />
                 </h1>
 
                 {/* Pre-game countdown or game timer */}
                 {!isPreGameCountdownComplete && startTimestamp ? (
-                    <PreGameCountdown 
+                    <PreGameCountdown
                         startTimestamp={startTimestamp}
                         onCountdownComplete={handlePreGameCountdownComplete}
                     />
@@ -558,7 +593,7 @@ const Type: React.FC = () => {
                 </div>
 
                 {/* Text display area */}
-                <div 
+                <div
                     className="mb-4 sm:mb-8"
                     onClick={focusInput}
                 >
@@ -607,6 +642,12 @@ const Type: React.FC = () => {
                         <p className="text-sm sm:text-base">Seed: {seed}</p>
                     </div>
                 )}
+                <button
+                    onClick={leaveRoomButton}
+                    className="mt-4 w-full bg-red-800 text-white p-2 rounded-lg hover:bg-red-600"
+                >
+                    Back to Main Menu
+                </button>
             </div>
         </div>
     );

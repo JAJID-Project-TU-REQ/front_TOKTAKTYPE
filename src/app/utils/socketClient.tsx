@@ -156,3 +156,9 @@ export const onPlayerIdReceived = (socket: Socket, callback: (playerId: string) 
     callback(playerId);
   });
 };
+
+export const errorHandler = (socket: Socket, callback: (error: string) => void) => {
+  socket.on("error", (error: string) => {
+    callback(error);
+  });
+}
