@@ -111,9 +111,9 @@ export const startGame = (socket: Socket, roomId: string) => {
 };
 
 // ฟังก์ชันสำหรับรับ event เมื่อเกมเริ่ม
-export const onGameStarted = (socket: Socket, callback: () => void) => {
-  socket.on("gameStarted", () => {
-    callback();
+export const onGameStarted = (socket: Socket, callback: (status: string) => void) => {
+  socket.on("gameStarted", (status: string) => {
+    callback(status);
   });
 };
 

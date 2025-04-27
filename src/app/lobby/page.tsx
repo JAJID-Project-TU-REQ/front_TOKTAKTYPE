@@ -8,7 +8,9 @@ import {
   Player, 
   onPlayerListUpdate,
   leaveRoom,
-  requestRoomInfo
+  requestRoomInfo,
+  startGame,
+  onGameStarted,
 } from '../utils/socketClient';
 import { useRouter } from 'next/navigation';
 
@@ -23,12 +25,17 @@ const Lobby: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
+
     onPlayerListUpdate(socket, (players: Player[]) => {
       setPlayerList(players);
       console.log("👤 Player List Updated:", players);
     });
 
-
+    onGameStarted(socket, (status: string) => {
+      console.log("🚀 Game Status:", status);
+      if (status) router.push(`/type`);
+    });
+    
     
     const playerId = localStorage.getItem("playerId");
     if (!(playerId && !hasEmitted.current)) return
@@ -59,8 +66,18 @@ const Lobby: React.FC = () => {
 
     return () => {
       socket.off("playerList");
+      socket.off('gameStarted');
+      socket.off("roomInfo");
+      socket.off("error");
     };
   }, [socket]);
+
+
+  function startGameButton() {
+    if (!(socket && roomCode)) return;
+    startGame(socket, roomCode)
+    console.log("🚀 Game started");
+  }
 
   function leaveRoomButton() {
     const playerId = localStorage.getItem("playerId");
@@ -72,6 +89,8 @@ const Lobby: React.FC = () => {
       console.log("👤 Player left the room");
     });
   }
+  
+
   return (
     // Background jra
     <div className="min-h-screen bg-[url('/try.svg')] bg-cover">
@@ -117,6 +136,7 @@ const Lobby: React.FC = () => {
           </div>
             {localStorage.getItem("playerId") === hostId && (
             <button 
+              onClick={startGameButton}
               className="mt-4 w-full bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-600"
             >
               ! Start Game !
