@@ -17,6 +17,10 @@ export interface RoomInfo {
   players: Player[];
 }
 
+export interface newHostId {
+  newHostId: string;
+}
+
 // ฟังก์ชันสำหรับสร้างห้องใหม่
 export const createRoom = (socket: Socket, playerId: string, callback: (roomId: string) => void) => {
   socket.emit("createRoom", playerId);

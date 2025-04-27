@@ -331,19 +331,21 @@ const Type: React.FC = () => {
     //รับและอัปเดต WPM ของผู้เล่น
     useEffect(() => {
         if (!socket) return;
+        if (isFinished) return;
+
         const interval = setInterval(() => {
             updatePlayerWpm(socket, roomCode || '', playerName || '', wpm);
 
             getPlayersWpm(socket, roomCode || '', (playersWpm) => {
                 if (playersWpm) {
                     setPlayersList(playersWpm);
-                    console.log("👤 Players WPM:", playersWpm);
                 }
             });
         }, 100);
 
+
         return () => clearInterval(interval);
-    }, [playerName, roomCode, socket, wpm]);
+    }, [isFinished, playerName, roomCode, socket, wpm]);
 
     function leaveRoomButton() {
         const playerId = localStorage.getItem("playerId");

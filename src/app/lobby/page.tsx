@@ -12,6 +12,7 @@ import {
   startGame,
   onGameStarted,
   getGameStatus,
+  onHostChanged,
 } from '../utils/socketClient';
 import { useRouter } from 'next/navigation';
 
@@ -26,6 +27,11 @@ const Lobby: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
 
+    onHostChanged(socket, (newHostId) => {
+      console.log("👤 Host changed to:", newHostId);
+      setHostId(newHostId);
+    })
+
     const playerListHandler = (players: Player[]) => {
       setPlayerList(players);
       console.log("👤 Player List Updated:", players);
@@ -38,15 +44,13 @@ const Lobby: React.FC = () => {
       if (status) router.push(`/type`);
     });
 
-
-
-
     const playerId = localStorage.getItem("playerId");
     if (!(playerId && !hasEmitted.current)) return
     getRoomIdByPlayerId(socket, playerId, (roomId) => {
       if (roomId) {
         setRoomId(roomId);
         console.log("📦 Room ID:", roomId);
+
 
         getGameStatus(socket, roomId, (status) => {
           if (!status) return;
@@ -82,7 +86,6 @@ const Lobby: React.FC = () => {
       socket.off("error");
     };
   }, [socket]);
-
 
   function startGameButton() {
     if (!(socket && roomCode)) return;

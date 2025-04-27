@@ -16,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [name, setName] = useState<string>("");
   const [roomCode, setRoomCode] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hasEmitted = useRef(false); // flag to track emitting
 
   useEffect(() => {
@@ -31,7 +32,6 @@ export default function LoginPage() {
         console.log("👤 Existing Player ID:", existingPlayerId);
       }
       if (existingPlayerId && !hasEmitted.current) {
-        setName((existingPlayerId))
 
         getRoomIdByPlayerId(socket, existingPlayerId, (roomId) => {
           if (!roomId) return;
@@ -52,9 +52,16 @@ export default function LoginPage() {
     if (socket) {
       const playerId = localStorage.getItem("playerId");
       if (!playerId) {
-        console.error("Player ID not found");
+        // console.error("Player ID not found");
+        setErrorMessage("Player ID not found");
         return;
       } 
+
+      if (!name) {
+        // console.error("Name is required to create a room");
+        setErrorMessage("กรุณากรอกชื่อก่อนสร้างห้อง");
+        return;
+      }
       createRoom(socket, playerId , (roomId: string) => {
         console.log("📦 Room created with ID:", roomId);
         setRoomCode(roomId); // แสดงรหัสห้องที่สร้าง
@@ -65,7 +72,8 @@ export default function LoginPage() {
           name,
           localStorage.getItem("playerId") || "",
           (error: string) => {
-            console.error("❌ Error joining room:", error);
+            // console.error("❌ Error joining room:", error);
+            setErrorMessage(error);
           },
         );
         socket.off("roomCreated");
@@ -78,8 +86,10 @@ export default function LoginPage() {
     const playerId = localStorage.getItem("playerId");
     if (!playerId) {
       console.error("Player ID not found");
+      setErrorMessage("Player ID not found");
       return;
     }
+
 
     if (socket) {
       joinRoom(
@@ -89,7 +99,8 @@ export default function LoginPage() {
         playerId,
         (error: string) => {
           router.push('/')
-          console.error("❌ Error joining room:", error);
+          // console.error("❌ Error joining room:", error);
+          setErrorMessage(error);
           return;
         },
       );
@@ -117,7 +128,13 @@ export default function LoginPage() {
             alt="Picture of the author"
           />
         </div>
-        {roomCode}
+
+        {errorMessage && (
+          <div className="mb-4 p-2 bg-red-200 text-red-800 text-center rounded">
+            {errorMessage}
+          </div>
+        )}
+
         {/* Character pick */}
         <div className="flex flex-col items-center gap-4 w-full">
           <h1 className="text-xl font-bold text-black">Choose a character</h1>
