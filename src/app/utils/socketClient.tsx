@@ -98,7 +98,25 @@ export const getRoomIdByPlayerId = (
   });
 };
 
+export const getStartTimestamp = (
+  socket: Socket,
+  roomId: string,
+  callback: (timestamp: number) => void
+) => {
+  socket.emit("getStartTimestamp", roomId, (timestamp: number) => {
+    callback(timestamp);
+  });
+}
 
+export const getGameStatus = (
+  socket: Socket,
+  roomId: string,
+  callback: (status: string) => void
+) => {
+  socket.emit("getGameStatus", roomId, (status: string) => {
+    callback(status);
+  });
+}
 
 // ฟังก์ชันสำหรับอัปเดต WPM ของผู้เล่น
 export const updateWpm = (socket: Socket, roomId: string, playerId: string, wpm: number) => {

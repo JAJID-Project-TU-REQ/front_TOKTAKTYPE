@@ -3,13 +3,17 @@ import React, { useState, useEffect, useRef, KeyboardEvent, ChangeEvent } from '
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { generateWords } from './wordGenerator';
+import { useSocket } from '../utils/socketContext';
+import { useRouter } from 'next/router';
+import { getStartTimestamp, getRoomIdByPlayerId } from '../utils/socketClient';
+import { get } from 'http';
 
 interface ResultsData {
-  wpm: number;
-  accuracy: number;
-  mistakes: number;
-  timeElapsed: number;
-  seed: number;
+    wpm: number;
+    accuracy: number;
+    mistakes: number;
+    timeElapsed: number;
+    seed: number;
 }
 
 interface CountdownTimerProps {
@@ -17,14 +21,14 @@ interface CountdownTimerProps {
     isStarted: boolean;
     isFinished: boolean;
     onTimeExpired?: () => void;
-  }
+}
 
-  const CountdownTimer: React.FC<CountdownTimerProps> = ({ 
-    timeLeft: initialTime, 
-    isStarted, 
+const CountdownTimer: React.FC<CountdownTimerProps> = ({
+    timeLeft: initialTime,
+    isStarted,
     isFinished,
-    onTimeExpired 
-  }) => {
+    onTimeExpired
+}) => {
     const [timeLeft, setTimeLeft] = useState<number>(initialTime);
     const timerRef = useRef<number | null>(null);
     const lastUpdateTimeRef = useRef<number>(Date.now());
@@ -37,64 +41,67 @@ interface CountdownTimerProps {
     useEffect(() => {
         // Clear any existing animation frame
         if (timerRef.current) {
-          cancelAnimationFrame(timerRef.current);
-          timerRef.current = null;
+            cancelAnimationFrame(timerRef.current);
+            timerRef.current = null;
         }
 
-    // Start the timer when the game starts
-    if (isStarted && !isFinished && timeLeft > 0) {
-        // Use requestAnimationFrame for smoother updates
-        const updateTimer = () => {
-          const now = Date.now();
-          const deltaTime = now - lastUpdateTimeRef.current;
-          
-          // Update every second (1000ms)
-          if (deltaTime >= 1000) {
-            lastUpdateTimeRef.current = now - (deltaTime % 1000); // Adjust for drift
-            
-            setTimeLeft((prevTime) => {
-              const newTime = prevTime - 1;
-              
-              if (newTime <= 0) {
-                // Stop the animation when time is up
-                if (onTimeExpired) {
-                  onTimeExpired();
+        // Start the timer when the game starts
+        if (isStarted && !isFinished && timeLeft > 0) {
+            // Use requestAnimationFrame for smoother updates
+            const updateTimer = () => {
+                const now = Date.now();
+                const deltaTime = now - lastUpdateTimeRef.current;
+
+                // Update every second (1000ms)
+                if (deltaTime >= 1000) {
+                    lastUpdateTimeRef.current = now - (deltaTime % 1000); // Adjust for drift
+
+                    setTimeLeft((prevTime) => {
+                        const newTime = prevTime - 1;
+
+                        if (newTime <= 0) {
+                            // Stop the animation when time is up
+                            if (onTimeExpired) {
+                                onTimeExpired();
+                            }
+                            return 0;
+                        }
+
+                        return newTime;
+                    });
                 }
-                return 0;
-              }
-              
-              return newTime;
-            });
-          }
 
-          timerRef.current = requestAnimationFrame(updateTimer);
-      };
-      
-      // Start the animation loop
-      timerRef.current = requestAnimationFrame(updateTimer);
-    }
-    
-    // Cleanup function
-    return () => {
-        if (timerRef.current) {
-          cancelAnimationFrame(timerRef.current);
-          timerRef.current = null;
+                timerRef.current = requestAnimationFrame(updateTimer);
+            };
+
+            // Start the animation loop
+            timerRef.current = requestAnimationFrame(updateTimer);
         }
-      };
+
+        // Cleanup function
+        return () => {
+            if (timerRef.current) {
+                cancelAnimationFrame(timerRef.current);
+                timerRef.current = null;
+            }
+        };
     }, [isStarted, isFinished, onTimeExpired, timeLeft]);
 
-  return (
-    <div style={{ textAlign: 'center', fontSize: '2rem' }}>
-      <p>นับถอยหลัง: {timeLeft} วินาที</p>
-    </div>
-  );
+    return (
+        <div style={{ textAlign: 'center', fontSize: '2rem' }}>
+            <p>นับถอยหลัง: {timeLeft} วินาที</p>
+        </div>
+    );
 };
 
-const MonkeyType: React.FC = () => {
+const Type: React.FC = () => {
     const searchParams = useSearchParams();
     const roomCode = searchParams.get("roomCode");
     const playerName = searchParams.get("playerName");
+    const { socket } = useSocket();
+    const router = useRouter();
 
+    const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
     const [text, setText] = useState<string>('');
     const [formattedText, setFormattedText] = useState<string[][]>([]);
     const [userInput, setUserInput] = useState<string>('');
@@ -108,10 +115,10 @@ const MonkeyType: React.FC = () => {
     const [mistakes, setMistakes] = useState<number>(0);
     const [isFinished, setIsFinished] = useState<boolean>(false);
     const [isStarted, setIsStarted] = useState<boolean>(false);
+    const [delayTime] = useState<number>(5);
     const [timeLeft, setTimeLeft] = useState<number>(60);
     const [seed, setSeed] = useState<number>(Math.floor(Math.random() * 10000));
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [hasClicked, setHasClicked] = useState<boolean>(true);
     const [longestLineWidth, setLongestLineWidth] = useState<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const textDisplayRef = useRef<HTMLDivElement>(null);
@@ -120,12 +127,12 @@ const MonkeyType: React.FC = () => {
     const formatTextIntoLines = (text: string): string[][] => {
         const words = text.split(' ');
         const lines: string[][] = [];
-        
+
         for (let i = 0; i < words.length; i += 8) {
             const line = words.slice(i, i + 8);
             lines.push(line);
         }
-        
+
         return lines;
     };
 
@@ -136,17 +143,17 @@ const MonkeyType: React.FC = () => {
             setText(generatedText);
             const formatted = formatTextIntoLines(generatedText);
             setFormattedText(formatted);
-            
+
             calculateLongestLine(formatted);
-            
+
             setIsLoading(false);
         }
         loadWords();
     }, [seed]);
-    
+
     const calculateLongestLine = (lines: string[][]): void => {
         if (lines.length === 0) return;
-        
+
         let maxLength = 0;
         for (const line of lines) {
             const lineLength = line.join(' ').length;
@@ -154,7 +161,7 @@ const MonkeyType: React.FC = () => {
                 maxLength = lineLength;
             }
         }
-        
+
         setLongestLineWidth(maxLength);
     };
 
@@ -163,7 +170,7 @@ const MonkeyType: React.FC = () => {
             if (inputRef.current) {
                 inputRef.current.focus();
             }
-            
+
             setIsStarted(true);
             setStartTime(Date.now());
         }
@@ -182,10 +189,10 @@ const MonkeyType: React.FC = () => {
                 }
             }
         };
-        
+
         // เพิ่ม event listener เริ่ม
         window.addEventListener('gameStarted', handleGameStarted as EventListener);
-        
+
         return () => {
             window.removeEventListener('gameStarted', handleGameStarted as EventListener);
         };
@@ -196,7 +203,7 @@ const MonkeyType: React.FC = () => {
         if (formattedText.length > 0 && userInput.length > 0) {
             let charCount = 0;
             let foundLineIndex = 0;
-            
+
             for (let i = 0; i < formattedText.length; i++) {
                 const lineText = formattedText[i].join(' ');
                 if (charCount + lineText.length + 1 > currentIndex) {
@@ -205,10 +212,10 @@ const MonkeyType: React.FC = () => {
                 }
                 charCount += lineText.length + 1;
             }
-            
+
             if (foundLineIndex !== currentLineIndex) {
                 setCurrentLineIndex(foundLineIndex);
-                
+
                 // ให้เห็นแค่ 5 บรรทัดล่าสุด
                 if (foundLineIndex > 2) {
                     setVisibleLines([
@@ -223,16 +230,39 @@ const MonkeyType: React.FC = () => {
         }
     }, [currentIndex, formattedText, currentLineIndex]);
 
+    useEffect(() => {
+        if (!socket) return;
+
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) return;
+        getRoomIdByPlayerId(socket, playerId, (roomId) => {
+            if (roomId) {
+                console.log("📦 Room ID:", roomId);
+                getStartTimestamp(socket, roomId, (timestamp) => {
+                    if (timestamp) {
+                        setStartTimestamp(timestamp / 1000);
+                    }
+                });
+
+            } else {
+                router.push(`/`);
+                console.log("👤 Player not in a room");
+            }
+        });
+
+
+    }, [socket]);
+
     const handleTimeExpired = (): void => {
         setIsFinished(true);
         setEndTime(Date.now());
 
         if (roomCode) {
             sendGameResults(
-                roomCode, 
-                wpm, 
-                accuracy, 
-                mistakes, 
+                roomCode,
+                wpm,
+                accuracy,
+                mistakes,
                 60 // total time in seconds
             );
         }
@@ -241,7 +271,7 @@ const MonkeyType: React.FC = () => {
     const resetTest = (): void => {
         const nextSeed = Math.floor(Math.random() * 10000);
         setSeed(nextSeed);
-        
+
         setUserInput('');
         setCurrentIndex(0);
         setCurrentLineIndex(0);
@@ -254,7 +284,6 @@ const MonkeyType: React.FC = () => {
         setIsFinished(false);
         setIsStarted(false);
         setTimeLeft(60);
-        setHasClicked(true);
     };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -294,7 +323,7 @@ const MonkeyType: React.FC = () => {
             const words = userInput.trim().split(/\s+/).length;
             const calculatedWpm = Math.round(words / timeInMinutes);
             setWpm(calculatedWpm);
-            
+
             // ส่ง WPM ไป server ด้วย Socket.IO
             if (roomCode) {
                 updateWpm(roomCode, calculatedWpm);
@@ -311,10 +340,10 @@ const MonkeyType: React.FC = () => {
     };
 
     const sendGameResults = (
-        roomCode: string, 
-        wpm: number, 
-        accuracy: number, 
-        mistakes: number, 
+        roomCode: string,
+        wpm: number,
+        accuracy: number,
+        mistakes: number,
         timeElapsed: number
     ): void => {
         console.log('Sending game results to server:', {
@@ -331,7 +360,7 @@ const MonkeyType: React.FC = () => {
         if (isLoading) {
             return <div className="text-gray-500">Loading words...</div>;
         }
-        
+
         // Determine character offset for highlighting
         const calculateCharOffset = (lineIndex: number): number => {
             let offset = 0;
@@ -340,7 +369,7 @@ const MonkeyType: React.FC = () => {
             }
             return offset;
         };
-        
+
         return (
             <div className="font-mono text-lg">
                 <div className="flex flex-col">
@@ -349,17 +378,17 @@ const MonkeyType: React.FC = () => {
                         if (!visibleLines.includes(lineIndex)) {
                             return null;
                         }
-                        
+
                         const lineText = line.join(' ');
                         const charOffset = calculateCharOffset(lineIndex);
-                        
+
                         return (
                             <div key={lineIndex} className="flex mb-2 flex-wrap">
                                 {lineText.split('').map((char, charIndex) => {
                                     const globalIndex = charOffset + charIndex;
                                     let className = "relative";
                                     let content = char;
-                                    
+
                                     if (globalIndex < userInput.length) {
                                         const isCorrect = userInput[globalIndex] === char;
                                         className += isCorrect ? " text-white-500" : " text-red-500 bg-red-100";
@@ -373,7 +402,7 @@ const MonkeyType: React.FC = () => {
                                             className += " border-l-2 border-gray-600 animate-pulse";
                                         }
                                     }
-                                    
+
                                     return (
                                         <span key={charIndex} className={className} style={{ width: char === " " ? "0.5em" : "auto" }}>
                                             {content}
@@ -390,7 +419,7 @@ const MonkeyType: React.FC = () => {
 
     const getResults = (): ResultsData | null => {
         if (!startTime || !endTime) return null;
-        
+
         return {
             wpm,
             accuracy,
@@ -409,7 +438,7 @@ const MonkeyType: React.FC = () => {
                     <div className="text-base sm:text-lg font-semibold rounded-lg p-2">🎮 NAME : {playerName || 'Player'}</div>
                     <div className="text-base sm:text-lg font-semibold rounded-lg p-2"> 🏆 RANKING : </div>
                 </div>
-                
+
                 <h1 className="text-xl sm:text-2xl font-bold text-center mb-2 sm:mb-2 flex justify-center">
                     <Image
                         src="/logo.png"
@@ -418,9 +447,9 @@ const MonkeyType: React.FC = () => {
                         alt="Picture of the author"
                     />
                 </h1>
-                
+
                 {/* Updated Countdown Timer Component */}
-                <CountdownTimer 
+                <CountdownTimer
                     timeLeft={timeLeft}
                     isStarted={isStarted}
                     isFinished={isFinished}
@@ -465,47 +494,20 @@ const MonkeyType: React.FC = () => {
                 </div>
 
                 {isFinished && (
-                    <div className="mb-4 p-2 sm:p-4 rounded-lg bg-gray-100">
+                    <div className="mb-4 p-2 sm:p-4 rounded-lg bg-gray-100 text-black">
                         <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Results</h2>
                         <p className="text-sm sm:text-base">WPM: {wpm}</p>
                         <p className="text-sm sm:text-base">Accuracy: {accuracy}%</p>
                         <p className="text-sm sm:text-base">Mistakes: {mistakes}</p>
                         <p className="text-sm sm:text-base">Time: {endTime && startTime ? ((endTime - startTime) / 1000).toFixed(2) : "0"} seconds</p>
                         <p className="text-sm sm:text-base">Seed: {seed}</p>
-                        
-                        {roomCode && (
-                            <button
-                                onClick={() => {
-                                    // ส่งข้อมูลผลการแข่งขันไปยังเซิร์ฟเวอร์
-                                    sendGameResults(
-                                        roomCode, 
-                                        wpm, 
-                                        accuracy, 
-                                        mistakes, 
-                                        ((endTime as number) - (startTime as number)) / 1000
-                                    );
-                                    // นำทางไปยังหน้า leaderboard
-                                    window.location.href = `/leaderboard?roomCode=${roomCode}&playerName=${playerName}`;
-                                }}
-                                className="mt-4 w-full p-2 bg-stone-800 text-white rounded-lg hover:bg-stone-600 transition"
-                            >
-                                View Leaderboard
-                            </button>
-                        )}
+
+
                     </div>
                 )}
-
-                <div className="flex">
-                    <button
-                        onClick={() => resetTest()}
-                        className="w-full p-2 text-black rounded-lg hover:text-black hover:bg-gray-300 transition border-2 border-gray-300"
-                    >
-                        {isFinished ? "Try Again" : "Reset"}
-                    </button>
-                </div>
             </div>
         </div>
     );
 };
 
-export default MonkeyType;
+export default Type;
