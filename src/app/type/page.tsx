@@ -12,7 +12,77 @@ interface ResultsData {
   seed: number;
 }
 
-const CountdownTimer = ({ timeLeft, isStarted, isFinished }) => {
+interface CountdownTimerProps {
+    timeLeft: number;
+    isStarted: boolean;
+    isFinished: boolean;
+    onTimeExpired?: () => void;
+  }
+
+  const CountdownTimer: React.FC<CountdownTimerProps> = ({ 
+    timeLeft: initialTime, 
+    isStarted, 
+    isFinished,
+    onTimeExpired 
+  }) => {
+    const [timeLeft, setTimeLeft] = useState<number>(initialTime);
+    const timerRef = useRef<number | null>(null);
+    const lastUpdateTimeRef = useRef<number>(Date.now());
+
+    useEffect(() => {
+        // Update local timeLeft when the prop changes
+        setTimeLeft(initialTime);
+    }, [initialTime]);
+
+    useEffect(() => {
+        // Clear any existing animation frame
+        if (timerRef.current) {
+          cancelAnimationFrame(timerRef.current);
+          timerRef.current = null;
+        }
+
+    // Start the timer when the game starts
+    if (isStarted && !isFinished && timeLeft > 0) {
+        // Use requestAnimationFrame for smoother updates
+        const updateTimer = () => {
+          const now = Date.now();
+          const deltaTime = now - lastUpdateTimeRef.current;
+          
+          // Update every second (1000ms)
+          if (deltaTime >= 1000) {
+            lastUpdateTimeRef.current = now - (deltaTime % 1000); // Adjust for drift
+            
+            setTimeLeft((prevTime) => {
+              const newTime = prevTime - 1;
+              
+              if (newTime <= 0) {
+                // Stop the animation when time is up
+                if (onTimeExpired) {
+                  onTimeExpired();
+                }
+                return 0;
+              }
+              
+              return newTime;
+            });
+          }
+
+          timerRef.current = requestAnimationFrame(updateTimer);
+      };
+      
+      // Start the animation loop
+      timerRef.current = requestAnimationFrame(updateTimer);
+    }
+    
+    // Cleanup function
+    return () => {
+        if (timerRef.current) {
+          cancelAnimationFrame(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }, [isStarted, isFinished, onTimeExpired, timeLeft]);
+
   return (
     <div style={{ textAlign: 'center', fontSize: '2rem' }}>
       <p>นับถอยหลัง: {timeLeft} วินาที</p>
@@ -45,7 +115,6 @@ const MonkeyType: React.FC = () => {
     const [longestLineWidth, setLongestLineWidth] = useState<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const textDisplayRef = useRef<HTMLDivElement>(null);
-    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // ทำให้โชว์8คำต่อบบรทัด
     const formatTextIntoLines = (text: string): string[][] => {
@@ -154,66 +223,22 @@ const MonkeyType: React.FC = () => {
         }
     }, [currentIndex, formattedText, currentLineIndex]);
 
-    useEffect(() => {
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
-        }
+    const handleTimeExpired = (): void => {
+        setIsFinished(true);
+        setEndTime(Date.now());
 
-        if (isStarted && !isFinished && timeLeft > 0) {
-            timerIntervalRef.current = setInterval(() => {
-                setTimeLeft((prevTime) => {
-                    const newTime = prevTime - 1;
-                    
-                    if (newTime <= 0) {
-                        if (timerIntervalRef.current) {
-                            clearInterval(timerIntervalRef.current);
-                            timerIntervalRef.current = null;
-                        }
-                        
-                        setIsFinished(true);
-                        setEndTime(Date.now());
-                    
-                        if (roomCode) {
-                            sendGameResults(
-                                roomCode, 
-                                wpm, 
-                                accuracy, 
-                                mistakes, 
-                                60 // เวลา 60 วิ
-                            );
-                        }
-                        
-                        return 0;
-                    }
-                    
-                    return newTime;
-                });
-            }, 1000);
+        if (roomCode) {
+            sendGameResults(
+                roomCode, 
+                wpm, 
+                accuracy, 
+                mistakes, 
+                60 // total time in seconds
+            );
         }
-        
-        // Cleanup function
-        return () => {
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-        };
-    }, [isStarted, isFinished, roomCode, wpm, accuracy, mistakes]);
-
-    useEffect(() => {
-        if (timeLeft === 0 && !isFinished) {
-            setIsFinished(true);
-            setEndTime(Date.now());
-        }
-    }, [timeLeft, isFinished]);
+    };
 
     const resetTest = (): void => {
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
-        }
-        
         const nextSeed = Math.floor(Math.random() * 10000);
         setSeed(nextSeed);
         
@@ -394,11 +419,12 @@ const MonkeyType: React.FC = () => {
                     />
                 </h1>
                 
-                {/* New Countdown Timer Component */}
+                {/* Updated Countdown Timer Component */}
                 <CountdownTimer 
                     timeLeft={timeLeft}
                     isStarted={isStarted}
                     isFinished={isFinished}
+                    onTimeExpired={handleTimeExpired}
                 />
 
                 <div className="mb-2 text-sm">
