@@ -42,28 +42,35 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     const startTimeRef = useRef<number | null>(null);
 
     useEffect(() => {
-
-        if (!isFinished) {
+        // Only set the initial time when the timer starts or when initialTime changes
+        if (!isStarted) {
             setTimeLeft(initialTime);
-        } else {
-            setTimeLeft(0);
-        }        if (isStarted && !isFinished && !startTimeRef.current) {
-            startTimeRef.current = Math.floor(Date.now() / 1000);
         }
-
+        
+        // If the game is finished, set time to 0
+        if (isFinished) {
+            setTimeLeft(0);
+            return;
+        }
+        
+        // Initialize the start time reference when the game starts
+        if (isStarted && !isFinished && !startTimeRef.current) {
+            startTimeRef.current = Math.floor(Date.now() / 1000);
+            setTimeLeft(initialTime); // Ensure we start with the proper time
+        }
+    
+        // Rest of the timer logic...
         if (timerRef.current) {
             cancelAnimationFrame(timerRef.current);
             timerRef.current = null;
         }
-
+    
         if (isStarted && !isFinished && startTimeRef.current) {
             const updateCountdown = () => {
                 const now = Math.floor(Date.now() / 1000);
-                // Calculate time left based on startTime + total duration - current time
                 const timeRemaining = startTimeRef.current + initialTime - now;
-
+    
                 if (timeRemaining <= 0) {
-                    setTimeLeft(0);
                     if (onTimeExpired) {
                         onTimeExpired();
                     }
@@ -73,14 +80,14 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
                     }
                     return;
                 }
-
+    
                 setTimeLeft(timeRemaining);
                 timerRef.current = requestAnimationFrame(updateCountdown);
             };
-
+    
             timerRef.current = requestAnimationFrame(updateCountdown);
         }
-
+    
         return () => {
             if (timerRef.current) {
                 cancelAnimationFrame(timerRef.current);
@@ -91,7 +98,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
     return (
         <div className="flex flex-col items-center justify-center h-40">
-            <h2 className="text-2xl font-bold mb-4">เวลาที่เหลือ</h2>
+            <h2 className="text-2xl font-bold mb-4 text-black">เวลาที่เหลือ</h2>
             <div className="text-5xl font-bold">{timeLeft}</div>
         </div>
     );
@@ -102,7 +109,7 @@ const PreGameCountdown: React.FC<{
     startTimestamp: number | null;
     onCountdownComplete: () => void;
 }> = ({ startTimestamp, onCountdownComplete }) => {
-    const [countdown, setCountdown] = useState<number>(5);
+    const [countdown, setCountdown] = useState<number>(8);
     const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -110,7 +117,7 @@ const PreGameCountdown: React.FC<{
 
         const updateCountdown = () => {
             const now = Math.floor(Date.now() / 1000);
-            const timeUntilStart = startTimestamp + 5 - now; // 5 second countdown
+            const timeUntilStart = startTimestamp + 8 - now; // 5 second countdown
 
             if (timeUntilStart <= 0) {
                 setCountdown(0);
@@ -374,26 +381,6 @@ const Type: React.FC = () => {
         }
     };
 
-    const resetTest = (): void => {
-        // Use current timestamp as new seed
-        const newTimestamp = Math.floor(Date.now() / 1000);
-        setStartTimestamp(newTimestamp);
-
-        // Reset other states
-        setUserInput('');
-        setCurrentIndex(0);
-        setCurrentLineIndex(0);
-        setVisibleLines([0, 1, 2, 3, 4]);
-        setStartTime(null);
-        setEndTime(null);
-        setWpm(0);
-        setAccuracy(100);
-        setMistakes(0);
-        setIsFinished(false);
-        setIsStarted(false);
-        setIsPreGameCountdownComplete(false);
-        setTimeLeft(0);
-    };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const value = e.target.value;
@@ -590,7 +577,7 @@ const Type: React.FC = () => {
                 )}
 
                 {/* Seed info */}
-                <div className="mb-2 text-sm">
+                <div className="mb-2 text-sm text-black">
                     <span>Current Seed: {seed}</span>
                 </div>
 
@@ -627,10 +614,10 @@ const Type: React.FC = () => {
 
                 {/* Stats display */}
                 <div className="flex justify-center gap-4 sm:gap-20 mb-4 mt-2 flex-wrap">
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
+                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2 text-black">
                         🎮 WPM: {wpm}
                     </div>
-                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2">
+                    <div className="text-base sm:text-lg font-semibold rounded-lg p-2 text-black">
                         ♥️ Accuracy: {accuracy}%
                     </div>
                 </div>

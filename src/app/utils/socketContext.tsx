@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SERVER_URL = "http://localhost:3001";
+const FORWARDED_SERVER_URL = "https://jdl6177s-3001.asse.devtunnels.ms/";
 
 interface SocketContextProps {
   socket: Socket | null;
@@ -15,7 +16,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const newSocket = io(SERVER_URL);
+    const newSocket = io(FORWARDED_SERVER_URL);
     setSocket(newSocket);
 
     console.log("🔗 Connected to server");

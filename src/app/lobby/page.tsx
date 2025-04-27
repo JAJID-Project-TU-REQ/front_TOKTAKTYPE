@@ -140,7 +140,7 @@ const Lobby: React.FC = () => {
                     key={player.id}
                     className="flex justify-between items-center border-b border-gray-300 py-2"
                   >
-                    <span className="text-gray-800">{player.name}</span>
+                    <span className="text-black-800">{player.name}</span>
                   </li>
                 ))
               ) : (
