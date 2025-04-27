@@ -1,11 +1,15 @@
 "use client";
-import React, { useState, useEffect, useRef, KeyboardEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, useRef, KeyboardEvent, ChangeEvent, use } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { generateWords } from './wordGenerator';
 import { useSocket } from '../utils/socketContext';
 import { useRouter } from 'next/navigation';
-import { getStartTimestamp, getRoomIdByPlayerId } from '../utils/socketClient';
+import {getStartTimestamp, 
+        getRoomIdByPlayerId,
+        updatePlayerWpm,
+        getPlayersWpm } from '../utils/socketClient';
+import { get } from 'http';
 
 // Type definitions
 interface ResultsData {
@@ -134,8 +138,9 @@ const PreGameCountdown: React.FC<{
 const Type: React.FC = () => {
     // Router and params
     const searchParams = useSearchParams();
-    const roomCode = searchParams.get("roomCode");
-    const playerName = searchParams.get("playerName");
+    const [roomCode, setRoomCode] = useState<string | null>(null);
+    const [playerName, setPlayerName] = useState<string | null>(null);
+    const [playersList, setPlayersList] = useState<{ name: string; wpm: number }[]>([]);
     const { socket } = useSocket();
     const router = useRouter();
 
@@ -289,9 +294,11 @@ const Type: React.FC = () => {
 
         const playerId = localStorage.getItem("playerId");
         if (!playerId) return;
+        setPlayerName(playerId);
         
         getRoomIdByPlayerId(socket, playerId, (roomId) => {
             if (roomId) {
+                setRoomCode(roomId);
                 getStartTimestamp(socket, roomId, (timestamp) => {
                     if (timestamp) {
                         setStartTimestamp(Math.floor(timestamp / 1000));
@@ -302,6 +309,23 @@ const Type: React.FC = () => {
             }
         });
     }, [socket, router]);
+
+    //รับและอัปเดต WPM ของผู้เล่น
+    useEffect(() => {
+        if (!socket) return;
+        const interval = setInterval(() => {
+            updatePlayerWpm(socket, roomCode || '', playerName || '', wpm);
+
+            getPlayersWpm(socket, roomCode || '', (playersWpm) => {
+                if (playersWpm) {
+                    setPlayersList(playersWpm);
+                    console.log("👤 Players WPM:", playersWpm);
+                }
+            });
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, [playerName, roomCode, socket, wpm]);
 
     // Game functions
     const handleTimeExpired = (): void => {
@@ -403,7 +427,7 @@ const Type: React.FC = () => {
         });
     };
 
-    const updateWpm = (roomCode: string, wpm: number): void => {
+    const updateWpm = (socket: unknown, roomCode: string, p0: string, wpm: number): void => {
         // TODO: Connect to Socket.IO to update WPM
         console.log('Updating WPM on server:', { roomCode, wpm });
     };

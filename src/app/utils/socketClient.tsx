@@ -45,8 +45,6 @@ export const joinRoom = (
   // });
 };
 
-
-
 // ฟังก์ชันสำหรับออกจากห้อง
 export const leaveRoom = (socket: Socket, roomId: string, playerId: string) => {
   socket.emit("leaveRoom", { roomId, playerId });
@@ -119,8 +117,18 @@ export const getGameStatus = (
 }
 
 // ฟังก์ชันสำหรับอัปเดต WPM ของผู้เล่น
-export const updateWpm = (socket: Socket, roomId: string, playerId: string, wpm: number) => {
+export const updatePlayerWpm = (socket: Socket, roomId: string, playerId: string, wpm: number) => {
   socket.emit("updateWpm", { roomId, playerId, wpm });
+};
+
+export const getPlayersWpm = (
+  socket: Socket,
+  roomId: string,
+  callback: (playersWpm: { name: string; wpm: number }[] | null) => void
+) => {
+  socket.emit("getPlayersWpm", roomId, (playersWpm: { name: string; wpm: number }[] | null) => {
+    callback(playersWpm);
+  });
 };
 
 // ฟังก์ชันสำหรับเริ่มเกม

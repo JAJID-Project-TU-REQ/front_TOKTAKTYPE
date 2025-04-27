@@ -26,10 +26,12 @@ const Lobby: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
 
-    onPlayerListUpdate(socket, (players: Player[]) => {
+    const playerListHandler = (players: Player[]) => {
       setPlayerList(players);
       console.log("👤 Player List Updated:", players);
-    });
+    };
+
+    onPlayerListUpdate(socket, playerListHandler);
 
     onGameStarted(socket, (status: string) => {
       console.log("🚀 Game Status:", status);
@@ -74,7 +76,7 @@ const Lobby: React.FC = () => {
 
 
     return () => {
-      socket.off("playerList");
+      socket.off("playerList", playerListHandler);
       socket.off('gameStarted');
       socket.off("roomInfo");
       socket.off("error");
